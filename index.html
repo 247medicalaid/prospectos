@@ -413,9 +413,6 @@ select.form-control{appearance:none;background-image:url("data:image/svg+xml,%3C
         <button type="button" onclick="tgPass('lp',this)">👁</button>
       </div>
     </div>
-    <div id="cors-warn" style="display:none;background:#fff3cd;border:1px solid #ffc107;border-radius:8px;padding:11px 13px;font-size:13px;color:#856404;margin-bottom:14px;line-height:1.5">
-      ⚠️ <strong>Abre el archivo descargado</strong>, no desde Dropbox/Drive directamente. En móvil: descarga el archivo → ábrelo con tu navegador.
-    </div>
     <button class="btn btn-primary" style="width:100%;min-height:48px;font-size:15px" onclick="doLogin()" id="btn-login">Ingresar</button>
     <div class="login-error" id="lerr">Usuario o contraseña incorrectos</div>
   </div>
@@ -730,16 +727,6 @@ select.form-control{appearance:none;background-image:url("data:image/svg+xml,%3C
 <div class="toast" id="toast"></div>
 
 <script>
-// ══ DETECT CORS ENVIRONMENT ══
-(function(){
-  var loc = window.location.href;
-  var isLocal = loc.startsWith('file://') || loc.includes('localhost') || loc.includes('127.0.0.1');
-  if (!isLocal) {
-    var w = document.getElementById('cors-warn');
-    if (w) w.style.display = 'block';
-  }
-})();
-
 // ══ CONFIG ══
 var CFG={
   sid:'1BSr2iNyudhtIN8VU0_b-BruBlwj4h85NJc7wxJ4JcnQ',
