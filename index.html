@@ -77,6 +77,9 @@ body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;fon
 /* ── KPI ── */
 .kpi-row{display:grid;grid-template-columns:repeat(auto-fill,minmax(155px,1fr));gap:10px;margin-bottom:20px;}
 .kpi{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:15px 17px;}
+.kpi.clickable{cursor:pointer;transition:border-color .15s,transform .1s;}
+.kpi.clickable:hover{border-color:var(--accent);transform:translateY(-1px);}
+.kpi.clickable:active{transform:translateY(0);}
 .kpi-label{font-size:11px;color:var(--text2);text-transform:uppercase;letter-spacing:.08em;margin-bottom:7px;}
 .kpi-val{font-family:'DM Mono',monospace;font-size:24px;font-weight:500;color:var(--text);}
 .kpi-val.g{color:#1565FF;}.kpi-val.b{color:var(--accent2);}.kpi-val.a{color:var(--accent3);}
@@ -465,9 +468,9 @@ select.form-control{appearance:none;background-image:url("data:image/svg+xml,%3C
         </div>
         <div class="status-bar"><div class="s-dot warn" id="s-dot"></div><span id="s-txt">Listo</span></div>
         <div class="kpi-row">
-          <div class="kpi"><div class="kpi-label">Prospectos</div><div class="kpi-val g" id="k-tot">—</div><div class="kpi-sub">registrados</div></div>
-          <div class="kpi"><div class="kpi-label">Con Visitas</div><div class="kpi-val b" id="k-vis">—</div><div class="kpi-sub">al menos 1</div></div>
-          <div class="kpi"><div class="kpi-label">Ciudades</div><div class="kpi-val a" id="k-cit">—</div><div class="kpi-sub">activas</div></div>
+          <div class="kpi clickable" onclick="navFromKPI('prospectos')"><div class="kpi-label">Prospectos</div><div class="kpi-val g" id="k-tot">—</div><div class="kpi-sub">registrados</div></div>
+          <div class="kpi clickable" onclick="navFromKPI('visitados')"><div class="kpi-label">Con Visitas</div><div class="kpi-val b" id="k-vis">—</div><div class="kpi-sub">al menos 1</div></div>
+          <div class="kpi clickable" onclick="navFromKPI('ciudades')"><div class="kpi-label">Ciudades</div><div class="kpi-val a" id="k-cit">—</div><div class="kpi-sub">activas</div></div>
           <div class="kpi"><div class="kpi-label">Visitas</div><div class="kpi-val" id="k-vt">—</div><div class="kpi-sub">totales</div></div>
         </div>
         <div class="tbl-wrap desk">
@@ -843,7 +846,8 @@ async function doLogin(){
       }
     }
     if(found){
-      S.user=found;g('loginWrap').style.display='none';g('appWrap').style.display='block';
+      S.user=found;try{sessionStorage.setItem('mp_session',JSON.stringify(found));}catch(e){}
+      g('loginWrap').style.display='none';g('appWrap').style.display='block';
       g('sf-u').textContent=found.nombre;g('sf-r').textContent=found.rol==='admin'?'Administrador':'Agente';
       if(g('mob-gear'))g('mob-gear').style.display='flex';
       if(found.rol!=='admin'){g('nav-aj').style.display='none';g('btn-au').style.display='none';}
@@ -852,7 +856,7 @@ async function doLogin(){
   }catch(e){toast('Error: '+e.message,'err');}
   g('btn-login').innerHTML='Ingresar';g('btn-login').disabled=false;
 }
-function doLogout(){S.user=null;g('loginWrap').style.display='flex';g('appWrap').style.display='none';g('lu').value='';g('lp').value='';}
+function doLogout(){S.user=null;try{sessionStorage.removeItem('mp_session');}catch(e){}g('loginWrap').style.display='flex';g('appWrap').style.display='none';g('lu').value='';g('lp').value='';}
 g('lp').addEventListener('keydown',function(e){if(e.key==='Enter')doLogin();});
 
 // ══ LOAD ══
@@ -1052,9 +1056,14 @@ async function saveP(){
 }
 async function delCur(){
   if(!confirm('¿Eliminar esta oficina y todas sus visitas?'))return;
+  var delId=S.viewId;
   try{
-    await apiCall('deleteProspecto',{id:S.viewId});
-    toast('Oficina eliminada');cm('m-d');await loadAll();
+    await apiCall('deleteProspecto',{id:delId});
+    // Optimistic local removal — UI updates instantly, loadAll reconciles in background
+    S.prosp=S.prosp.filter(function(p){return p.id!==delId;});
+    S.vis=S.vis.filter(function(v){return v.prospectId!==delId;});
+    renderAll();
+    toast('Oficina eliminada');cm('m-d');loadAll();
   }catch(e){toast('Error: '+e.message,'err');}
 }
 
@@ -1086,7 +1095,10 @@ async function deleteVisit(id){
   if(!confirm('¿Eliminar esta visita?'))return;
   try{
     await apiCall('deleteVisita',{id:id});
-    toast('Visita eliminada');await loadAll();openD(S.viewId);
+    // Optimistic local removal
+    S.vis=S.vis.filter(function(v){return v.id!==id;});
+    renderAll();openD(S.viewId);
+    toast('Visita eliminada');loadAll();
   }catch(e){toast('Error: '+e.message,'err');}
 }
 
@@ -1168,8 +1180,12 @@ async function saveC(){
 }
 async function delC(id){
   if(!confirm('¿Eliminar esta ciudad?'))return;
-  try{await apiCall('deleteCiudad',{id:id});toast('Ciudad eliminada');await loadAll();}
-  catch(e){toast('Error: '+e.message,'err');}
+  try{
+    await apiCall('deleteCiudad',{id:id});
+    S.cities=S.cities.filter(function(c){return c.id!==id;});
+    renderAll();fillCP();
+    toast('Ciudad eliminada');loadAll();
+  }catch(e){toast('Error: '+e.message,'err');}
 }
 
 // ══ CITY PICKER ══
@@ -1250,6 +1266,25 @@ function nav(p,sidebarBtn,ctxId){
   if(p==='ciudades')renderCities();
   if(p==='ajustes')renderAj();
 }
+function navFromKPI(kind){
+  var target=(kind==='ciudades')?'ciudades':'prospectos';
+  if(kind!=='ciudades'){
+    // Reset filters so result matches the KPI count
+    if(g('f-s'))g('f-s').value='';
+    if(g('f-c')){g('f-c').value='';g('f-c-display').value='';}
+    if(g('f-zip'))g('f-zip').value='';
+    if(g('f-agent'))g('f-agent').value='';
+    if(g('f-sort'))g('f-sort').value='nombre';
+    if(g('f-st'))g('f-st').value=(kind==='visitados')?'si':'';
+  }
+  // Find matching sidebar button so its "active" style gets applied
+  var sb=null;
+  document.querySelectorAll('.nav-btn').forEach(function(b){
+    var oc=b.getAttribute('onclick')||'';
+    if(oc.indexOf("nav('"+target+"'")===0)sb=b;
+  });
+  nav(target,sb,target);
+}
 
 // ══ HELPERS ══
 function om(id){g(id).classList.add('open');}
@@ -1260,6 +1295,22 @@ function fd(d){if(!d)return'—';try{return new Date(d+'T12:00:00').toLocaleDate
 function toast(msg,type){var t=g('toast');t.textContent=msg;t.className='toast '+(type||'')+' show';setTimeout(function(){t.classList.remove('show');},3000);}
 function tgPass(id,btn){var inp=g(id);if(inp.type==='password'){inp.type='text';btn.textContent='🔒';}else{inp.type='password';btn.textContent='👁';}}
 document.querySelectorAll('.overlay').forEach(function(o){o.addEventListener('click',function(e){if(e.target===this)this.classList.remove('open');});});
+
+// ══ SESSION RESTORE ══
+(function(){
+  try{
+    var saved=sessionStorage.getItem('mp_session');
+    if(!saved)return;
+    var found=JSON.parse(saved);
+    if(!found||!found.username)return;
+    S.user=found;
+    g('loginWrap').style.display='none';g('appWrap').style.display='block';
+    g('sf-u').textContent=found.nombre;g('sf-r').textContent=found.rol==='admin'?'Administrador':'Agente';
+    if(g('mob-gear'))g('mob-gear').style.display='flex';
+    if(found.rol!=='admin'){g('nav-aj').style.display='none';g('btn-au').style.display='none';}
+    updateCtxBar('dashboard');loadAll();
+  }catch(e){try{sessionStorage.removeItem('mp_session');}catch(_){}}
+})();
 </script>
 </body>
 </html>
