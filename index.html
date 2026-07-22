@@ -148,15 +148,15 @@ select.form-control{appearance:none;background-image:url("data:image/svg+xml,%3C
 .pass-toggle button{position:absolute;right:10px;background:none;border:none;color:var(--text3);cursor:pointer;font-size:16px;padding:4px;-webkit-tap-highlight-color:transparent;}
 
 /* ── MODAL ── */
-.overlay{position:fixed;inset:0;background:rgba(0,0,0,.75);display:flex;align-items:flex-end;justify-content:center;z-index:200;opacity:0;pointer-events:none;visibility:hidden;transition:opacity .2s;}
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,.75);display:flex;align-items:center;justify-content:center;padding:24px;z-index:200;opacity:0;pointer-events:none;visibility:hidden;transition:opacity .2s;}
 .overlay.open{opacity:1;pointer-events:auto;visibility:visible;}
-.modal{background:var(--surface);border:1px solid var(--border);border-radius:16px 16px 0 0;width:100%;max-width:720px;max-height:93vh;overflow-y:auto;-webkit-overflow-scrolling:touch;}
+.modal{background:var(--surface);border:1px solid var(--border);border-radius:16px;box-shadow:0 20px 60px rgba(0,0,0,.4);width:100%;max-width:720px;max-height:88vh;overflow-y:auto;-webkit-overflow-scrolling:touch;}
 .modal-lg{max-width:820px;}
-.modal-head{display:flex;align-items:center;justify-content:space-between;padding:18px 22px;border-bottom:1px solid var(--border);position:sticky;top:0;background:var(--surface);z-index:5;}
+.modal-head{display:flex;align-items:center;justify-content:space-between;padding:18px 22px;border-bottom:1px solid var(--border);position:sticky;top:0;background:var(--surface);z-index:5;border-radius:16px 16px 0 0;}
 .modal-title{font-family:'DM Serif Display',serif;font-size:19px;}
 .modal-close{background:var(--surface2);border:none;color:var(--text2);width:34px;height:34px;border-radius:8px;cursor:pointer;font-size:19px;display:flex;align-items:center;justify-content:center;-webkit-tap-highlight-color:transparent;}
 .modal-body{padding:22px;}
-.modal-foot{padding:15px 22px;border-top:1px solid var(--border);display:flex;justify-content:flex-end;gap:8px;position:sticky;bottom:0;background:var(--surface);}
+.modal-foot{padding:15px 22px;border-top:1px solid var(--border);display:flex;justify-content:flex-end;gap:8px;position:sticky;bottom:0;background:var(--surface);border-radius:0 0 16px 16px;}
 
 /* ── VISIT ── */
 .visit-card{background:var(--surface2);border-radius:8px;padding:14px 16px;margin-bottom:10px;}
@@ -288,12 +288,12 @@ select.form-control{appearance:none;background-image:url("data:image/svg+xml,%3C
   .detail-val{color:#0a1d3d;font-size:15px;}
   .detail-val a{color:#1565FF;}
   /* Modals */
-  .overlay{align-items:stretch;}
-  .modal{border-radius:0;max-height:100vh;height:100vh;background:#c8ccd2;border-color:#8e939b;display:flex;flex-direction:column;}
-  .modal-head{background:#c8ccd2;border-bottom:1px solid #8e939b;position:sticky;top:0;flex-shrink:0;padding:14px 16px;}
+  .overlay{align-items:stretch;padding:0;}
+  .modal{border-radius:0;max-height:100vh;height:100vh;background:#c8ccd2;border-color:#8e939b;display:flex;flex-direction:column;box-shadow:none;}
+  .modal-head{background:#c8ccd2;border-bottom:1px solid #8e939b;position:sticky;top:0;flex-shrink:0;padding:14px 16px;border-radius:0;}
   .modal-title{color:#0a1d3d;font-size:18px;line-height:1.3;}
   .modal-close{background:#bdc1c8;color:#1a3563;}
-  .modal-foot{background:#c8ccd2;border-top:1px solid #8e939b;position:sticky;bottom:0;flex-shrink:0;padding-bottom:calc(15px + env(safe-area-inset-bottom));}
+  .modal-foot{background:#c8ccd2;border-top:1px solid #8e939b;position:sticky;bottom:0;flex-shrink:0;padding-bottom:calc(15px + env(safe-area-inset-bottom));border-radius:0;}
   .modal-body{background:#c8ccd2;flex:1;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;}
   /* Forms */
   .form-row,.form-row.three{grid-template-columns:1fr;}
@@ -488,7 +488,7 @@ select.form-control{appearance:none;background-image:url("data:image/svg+xml,%3C
           <button class="btn btn-primary btn-sm hide-mob" onclick="openAddP()">+ Nueva Oficina</button>
         </div>
         <div class="filters">
-          <input class="f-input" id="f-s" placeholder="Buscar nombre, doctor, teléfono..." oninput="renderP()" style="flex:1;min-width:180px">
+          <input class="f-input" id="f-s" placeholder="Buscar nombre, doctor, teléfono, email..." oninput="renderP()" style="flex:1;min-width:180px">
           <div class="city-picker" id="cp-filter" style="min-width:180px">
             <input type="text" class="city-picker-input" id="f-c-display" placeholder="Todas las ciudades" readonly onclick="toggleCP('cp-filter')">
             <input type="hidden" id="f-c">
@@ -555,7 +555,7 @@ select.form-control{appearance:none;background-image:url("data:image/svg+xml,%3C
 </div>
 
 <!-- MODAL: PROSPECTO -->
-<!-- Columns: id,nombre,telefono,direccion,ciudad,zipcode,doctores,telDoctor,manager,telManager,frontdesk,reviewCount,rating,notas,creadoPor,creadoEn -->
+<!-- Columns: id,nombre,telefono,email,direccion,ciudad,zipcode,doctores,telDoctor,manager,telManager,frontdesk,reviewCount,rating,notas,creadoPor,creadoEn -->
 <div class="overlay" id="m-p">
   <div class="modal modal-lg">
     <div class="modal-head"><div class="modal-title" id="mp-t">Nueva Oficina</div><button class="modal-close" onclick="cm('m-p')">✕</button></div>
@@ -568,6 +568,7 @@ select.form-control{appearance:none;background-image:url("data:image/svg+xml,%3C
         <div class="form-group"><label class="form-label">Teléfono Principal</label><input class="form-control" id="fp-t" placeholder="(407) 555-0000" inputmode="tel"></div>
         <div class="form-group"><label class="form-label">Dirección</label><input class="form-control" id="fp-d" placeholder="123 Main St"></div>
       </div>
+      <div class="form-row"><div class="form-group form-full"><label class="form-label">Email</label><input class="form-control" id="fp-e" placeholder="oficina@ejemplo.com" type="email" inputmode="email" autocapitalize="none"></div></div>
       <div class="form-row">
         <div class="form-group"><label class="form-label">Ciudad *</label>
           <div class="city-picker" id="cp-prosp">
@@ -902,7 +903,7 @@ function renderP(){
   var sr=(g('f-s').value||'').toLowerCase(),cf=(g('f-c')||{value:''}).value,sf=g('f-st').value,zf=(g('f-zip').value||'').trim(),ag=g('f-agent').value,sort=g('f-sort').value;
   var ps=S.prosp.filter(function(p){
     if(S.user&&S.user.rol!=='admin'&&S.user.ciudades&&S.user.ciudades.length&&!S.user.ciudades.includes(p.ciudad))return false;
-    if(sr&&!(p.nombre+p.doctores+p.telefono+p.manager+p.zipcode+p.telDoctor+p.telManager).toLowerCase().includes(sr))return false;
+    if(sr&&!(p.nombre+p.doctores+p.telefono+p.email+p.manager+p.zipcode+p.telDoctor+p.telManager).toLowerCase().includes(sr))return false;
     if(cf&&p.ciudad!==cf)return false;
     if(zf&&!String(p.zipcode||'').startsWith(zf))return false;
     var vs=S.vis.filter(function(v){return v.prospectId===p.id;});
@@ -978,8 +979,10 @@ function openD(id){
   var st='★'.repeat(Math.round(p.rating||0))+'☆'.repeat(5-Math.round(p.rating||0));
   // Build phone link helper
   function tel(v){return v?'<a href="tel:'+v+'">'+x(v)+'</a>':x(v||'—');}
+  function mail(v){return v?'<a href="mailto:'+v+'">'+x(v)+'</a>':'—';}
   g('md-g').innerHTML=[
     ['Teléfono Principal',tel(p.telefono)],
+    ['Email',mail(p.email)],
     ['Dirección',x(p.direccion||'—')],
     ['Ciudad',x(p.ciudad||'—')],
     ['Zip Code',x(p.zipcode||'—')],
@@ -1014,7 +1017,7 @@ function renderVL(){
 // ══ PROSPECT CRUD ══
 function openAddP(){
   S.editId=null;g('mp-t').textContent='Nueva Oficina Médica';
-  ['fp-n','fp-t','fp-d','fp-dc','fp-tdc','fp-m','fp-tm','fp-f','fp-no','fp-z'].forEach(function(id){g(id).value='';});
+  ['fp-n','fp-t','fp-e','fp-d','fp-dc','fp-tdc','fp-m','fp-tm','fp-f','fp-no','fp-z'].forEach(function(id){g(id).value='';});
   g('fp-rc').value='';g('fp-r').value='';
   g('fp-c').value='';g('fp-c-display').value='';
   _cp['cp-prosp']={value:'',search:'',letter:''};
@@ -1023,7 +1026,7 @@ function openAddP(){
 function editCur(){
   var p=S.prosp.find(function(x){return x.id===S.viewId;});if(!p)return;
   S.editId=p.id;g('mp-t').textContent='Editar Oficina';
-  g('fp-n').value=p.nombre||'';g('fp-t').value=p.telefono||'';g('fp-d').value=p.direccion||'';
+  g('fp-n').value=p.nombre||'';g('fp-t').value=p.telefono||'';g('fp-e').value=p.email||'';g('fp-d').value=p.direccion||'';
   g('fp-z').value=p.zipcode||'';g('fp-dc').value=p.doctores||'';g('fp-tdc').value=p.telDoctor||'';
   g('fp-m').value=p.manager||'';g('fp-tm').value=p.telManager||'';
   g('fp-f').value=p.frontdesk||'';g('fp-rc').value=p.reviewCount||'';g('fp-r').value=p.rating||'';g('fp-no').value=p.notas||'';
@@ -1037,11 +1040,13 @@ async function saveP(){
   if(!ciudad){toast('Selecciona una ciudad','err');return;}
   var zip=g('fp-z').value.trim();
   if(zip && zip.length!==5){toast('El Zip Code debe tener exactamente 5 dígitos','err');return;}
+  var email=g('fp-e').value.trim();
+  if(email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){toast('El email no tiene un formato válido','err');return;}
   var btn=g('btn-sp');btn.innerHTML='<span class="spin"></span>';btn.disabled=true;
   try{
     var data={
       id:S.editId||null,nombre:nombre,
-      telefono:g('fp-t').value.trim(),direccion:g('fp-d').value.trim(),
+      telefono:g('fp-t').value.trim(),email:email,direccion:g('fp-d').value.trim(),
       ciudad:ciudad,zipcode:zip,
       doctores:g('fp-dc').value.trim(),telDoctor:g('fp-tdc').value.trim(),
       manager:g('fp-m').value.trim(),telManager:g('fp-tm').value.trim(),
