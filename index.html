@@ -997,7 +997,20 @@ function emailedDate(pid){
   var e = S.emailLog.filter(function(r){return r.prospectId===pid;}).sort(function(a,b){return String(b.fecha)>String(a.fecha)?1:-1;})[0];
   return e ? String(e.fecha).slice(0,10) : '';
 }
-function _emContacto(p){ return (p.manager||'').trim() || (p.frontdesk||'').trim() || 'Doctor'; }
+function emailStats(pid){
+  if(!S.emailLog || !S.emailLog.length) return {count:0, last:''};
+  var rows = S.emailLog.filter(function(r){return r.prospectId===pid;});
+  if(!rows.length) return {count:0, last:''};
+  var last = rows.map(function(r){return String(r.fecha);}).sort().pop();
+  return {count: rows.length, last: fd(last.slice(0,16))};
+}
+function _emContacto(p){
+  var doc=((p.doctores||'').split(/[,;\/]| y /)[0]||'').trim();
+  if(doc) return doc;
+  var mgr=(p.manager||'').trim();
+  if(mgr) return mgr;
+  return (p.nombre||'').trim() || 'Doctor';
+}
 function _emRecipients(){
   var ids=Object.keys(SELP);
   var ok=[], sinEmail=[], yaEnviado=[];
@@ -1016,7 +1029,15 @@ function openEmailModal(){
   var htm='<div style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:12px 14px;font-size:13px;line-height:1.6">';
   htm+='<b style="color:#00A88E">✓ '+r.ok.length+' prospecto(s) con email</b> recibirán el mensaje personalizado.';
   if(r.sinEmail.length) htm+='<br><b style="color:#E11D48">✕ '+r.sinEmail.length+' sin email</b> (se omiten): '+r.sinEmail.slice(0,5).join(', ')+(r.sinEmail.length>5?'…':'');
-  if(r.yaEnviado.length) htm+='<br><b style="color:#FF8A00">⚠ '+r.yaEnviado.length+' ya recibieron email antes</b>: '+r.yaEnviado.slice(0,5).join(', ')+(r.yaEnviado.length>5?'…':'');
+  if(r.yaEnviado.length){
+    htm+='<br><b style="color:#FF8A00">⚠ '+r.yaEnviado.length+' ya recibieron email antes:</b>';
+    var _det = r.ok.filter(function(x2){return emailStats(x2.id).count>0;}).slice(0,6);
+    _det.forEach(function(x2){
+      var st=emailStats(x2.id);
+      htm+='<br><span style="font-size:12px;padding-left:14px">• '+x2.clinic+' — <b>'+st.count+' envío'+(st.count===1?'':'s')+'</b>, último: '+st.last+'</span>';
+    });
+    if(r.yaEnviado.length>6) htm+='<br><span style="font-size:12px;padding-left:14px">… y '+(r.yaEnviado.length-6)+' más</span>';
+  }
   htm+='</div>';
   g('em-resumen').innerHTML=htm;
   g('em-progreso').style.display='none'; g('em-progreso').innerHTML='';
