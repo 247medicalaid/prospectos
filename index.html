@@ -506,7 +506,7 @@ select.form-control{appearance:none;background-image:url("data:image/svg+xml,%3C
         </div>
         <div class="tbl-wrap desk">
           <div class="tbl-head"><div class="tbl-title">📞 Contactos del Día</div></div>
-          <div class="tbl-scroll"><table><thead><tr><th>Práctica</th><th>Ciudad</th><th>Fecha</th><th>Agente</th><th>Tipo de Contacto</th><th>Notas</th></tr></thead><tbody id="tb-rec"></tbody></table></div>
+          <div class="tbl-scroll"><table><thead><tr><th style="width:30px"><input type="checkbox" id="sel-all-day" onclick="toggleSelDay(this.checked)" title="Seleccionar los contactos del día (con email)" style="width:15px;height:15px;cursor:pointer"></th><th>Práctica</th><th>Ciudad</th><th>Fecha</th><th>Agente</th><th>Tipo de Contacto</th><th>Notas</th></tr></thead><tbody id="tb-rec"></tbody></table></div>
         </div>
         <div class="mob-only" id="mob-rec"></div>
       </div>
@@ -954,6 +954,7 @@ function renderAll(){
 var SC={Interesado:'badge-g','Cliente ✓':'badge-client',Visitado:'badge-b',Seguimiento:'badge-a','No disponible':'badge-gray','No interesado':'badge-noint'};
 var EST_LBL={'Visitado':'Visit','Interesado':'Interested','Seguimiento':'Called','No interesado':'Not Interested','Cliente ✓':'CLIENT','No disponible':'No disponible'};
 function estLbl(v){return EST_LBL[v]||v||'';}
+function hasEmail(p){return !!(p && (p.email||'').trim().indexOf('@')>0);}
 function lastEstado(vs){if(!vs||!vs.length)return'';var o=vs.slice().sort(function(a,b){return String(b.fecha)>String(a.fecha)?1:-1;});return o[0].estado||'';}
 
 function shiftDay(n){
@@ -968,8 +969,21 @@ function shiftDay(n){
 var SELP = {};
 function toggleSelP(id, on){ if(on) SELP[id]=true; else delete SELP[id]; updateSelBar(); }
 function toggleSelAll(on){
-  (window._lastPs||[]).forEach(function(id){ if(on) SELP[id]=true; else delete SELP[id]; });
+  (window._lastPs||[]).forEach(function(id){
+    var p=S.prosp.find(function(x2){return x2.id===id;});
+    if(!hasEmail(p)) return;
+    if(on) SELP[id]=true; else delete SELP[id];
+  });
   renderP(); updateSelBar();
+}
+function toggleSelDay(on){
+  var d=g('dc-date')?g('dc-date').value:'';
+  S.vis.filter(function(v){return String(v.fecha).slice(0,10)===d;}).forEach(function(v){
+    var p=S.prosp.find(function(x2){return x2.id===v.prospectId;});
+    if(!p||!hasEmail(p)) return;
+    if(on) SELP[p.id]=true; else delete SELP[p.id];
+  });
+  renderDash(); updateSelBar();
 }
 function clearSelP(){ SELP={}; var sa=g('sel-all'); if(sa) sa.checked=false; renderP(); updateSelBar(); }
 function updateSelBar(){
@@ -1071,7 +1085,7 @@ function renderDash(){
   if(_dcEl&&!_dcEl.value)_dcEl.value=todayStr();
   var _day=_dcEl?_dcEl.value:todayStr();
   var rec=S.vis.filter(function(v){return String(v.fecha).slice(0,10)===_day;}).sort(function(a,b){return String(b.fecha)>String(a.fecha)?1:-1;});
-  g('tb-rec').innerHTML=rec.length?rec.map(function(v){var p=S.prosp.find(function(x){return x.id===v.prospectId;})||{nombre:'?',ciudad:'',id:''};return'<tr><td style="font-weight:500">'+(p.id?'<span style="cursor:pointer;color:#1565FF" onclick="openD(\''+p.id+'\')">'+x(p.nombre)+'</span>':x(p.nombre))+'</td><td><span class="badge badge-b">'+x(p.ciudad)+'</span></td><td class="mono">'+fd(v.fecha)+'</td><td style="color:var(--text3)">'+x(v.usuario)+'</td><td><span class="badge '+(SC[v.estado]||'badge-gray')+'">'+x(estLbl(v.estado))+'</span></td><td style="color:var(--text2);max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+x(v.notas)+'</td></tr>';}).join(''):'<tr><td colspan="6" style="text-align:center;color:var(--text3);padding:24px">Sin contactos registrados este día</td></tr>';
+  g('tb-rec').innerHTML=rec.length?rec.map(function(v){var p=S.prosp.find(function(x){return x.id===v.prospectId;})||{nombre:'?',ciudad:'',id:''};return'<tr><td>'+(p.id&&hasEmail(p)?'<input type="checkbox" '+(SELP[p.id]?'checked ':'')+'onclick="event.stopPropagation();toggleSelP(\''+p.id+'\',this.checked)" style="width:15px;height:15px;cursor:pointer">':'<input type="checkbox" disabled title="Sin email registrado" style="width:15px;height:15px;opacity:.25;cursor:not-allowed">')+'</td><td style="font-weight:500">'+(p.id?'<span style="cursor:pointer;color:#1565FF" onclick="openD(\''+p.id+'\')">'+x(p.nombre)+'</span>':x(p.nombre))+'</td><td><span class="badge badge-b">'+x(p.ciudad)+'</span></td><td class="mono">'+fd(v.fecha)+'</td><td style="color:var(--text3)">'+x(v.usuario)+'</td><td><span class="badge '+(SC[v.estado]||'badge-gray')+'">'+x(estLbl(v.estado))+'</span></td><td style="color:var(--text2);max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+x(v.notas)+'</td></tr>';}).join(''):'<tr><td colspan="7" style="text-align:center;color:var(--text3);padding:24px">Sin contactos registrados este día</td></tr>';
   g('mob-rec').innerHTML=rec.length?rec.map(function(v){var p=S.prosp.find(function(x){return x.id===v.prospectId;})||{nombre:'?',ciudad:''};return'<div class="pcard" onclick="openD(\''+p.id+'\')">'+'<div class="pcard-name">'+x(p.nombre)+'</div>'+'<div class="pcard-tags"><span class="badge badge-b">'+x(p.ciudad)+'</span><span class="badge '+(SC[v.estado]||'badge-gray')+'">'+x(estLbl(v.estado))+'</span></div>'+'<div class="pcard-row"><span style="color:var(--text3)">'+fd(v.fecha)+'</span><span>'+x(v.usuario)+'</span></div></div>';}).join(''):'<div style="text-align:center;padding:24px;color:var(--text3)">Sin contactos este día</div>';
   renderDayContacts();
 }
@@ -1108,7 +1122,7 @@ function renderP(){
   var cnt=g('p-cnt');if(cnt)cnt.textContent='Prospectos ('+ps.length+')';
   window._lastPs = ps.map(function(p){return p.id;});
   // Desktop
-  g('tb-p').innerHTML=ps.length?ps.map(function(p){var vs=S.vis.filter(function(v){return v.prospectId===p.id;});var _le=lastEstado(vs);var _rc=_le==='Cliente ✓'?' class="row-client"':(_le==='No interesado'?' class="row-noint"':'');var st='★'.repeat(Math.round(p.rating||0))+'☆'.repeat(5-Math.round(p.rating||0));return'<tr'+_rc+'><td><input type="checkbox" '+(SELP[p.id]?'checked ':'')+'onclick="event.stopPropagation();toggleSelP(\''+p.id+'\',this.checked)" style="width:15px;height:15px;cursor:pointer"></td><td><span style="cursor:pointer;color:#1565FF" onclick="openD(\''+p.id+'\')">'+x(p.nombre)+(emailedDate(p.id)?'<span title="📧 Email enviado: '+emailedDate(p.id)+'" style="margin-left:5px;font-size:12px">📧</span>':'')+'</span></td><td><span class="badge badge-b">'+x(p.ciudad)+'</span></td><td class="mono">'+x(p.zipcode||'—')+'</td><td style="color:var(--text2)">'+x(p.doctores||'—')+'</td><td class="mono">'+x(p.telefono||'—')+'</td><td><span class="stars">'+st+'</span> <span style="font-size:13px;color:var(--text3)">'+(p.reviewCount||0)+'</span></td><td><span class="badge '+(vs.length?'badge-a':'badge-gray')+'">'+vs.length+'</span></td><td><button class="btn btn-ghost btn-sm" onclick="openD(\''+p.id+'\')">Ver</button></td></tr>';}).join(''):'<tr><td colspan="9" style="text-align:center;color:var(--text3);padding:32px">Sin prospectos. <span style="color:var(--accent);cursor:pointer" onclick="openAddP()">Agregar →</span></td></tr>';
+  g('tb-p').innerHTML=ps.length?ps.map(function(p){var vs=S.vis.filter(function(v){return v.prospectId===p.id;});var _le=lastEstado(vs);var _rc=_le==='Cliente ✓'?' class="row-client"':(_le==='No interesado'?' class="row-noint"':'');var st='★'.repeat(Math.round(p.rating||0))+'☆'.repeat(5-Math.round(p.rating||0));return'<tr'+_rc+'><td>'+(hasEmail(p)?'<input type="checkbox" '+(SELP[p.id]?'checked ':'')+'onclick="event.stopPropagation();toggleSelP(\''+p.id+'\',this.checked)" style="width:15px;height:15px;cursor:pointer">':'<input type="checkbox" disabled title="Sin email registrado" style="width:15px;height:15px;opacity:.25;cursor:not-allowed">')+'</td><td><span style="cursor:pointer;color:#1565FF" onclick="openD(\''+p.id+'\')">'+x(p.nombre)+(emailedDate(p.id)?'<span title="📧 Email enviado: '+emailedDate(p.id)+'" style="margin-left:5px;font-size:12px">📧</span>':'')+'</span></td><td><span class="badge badge-b">'+x(p.ciudad)+'</span></td><td class="mono">'+x(p.zipcode||'—')+'</td><td style="color:var(--text2)">'+x(p.doctores||'—')+'</td><td class="mono">'+x(p.telefono||'—')+'</td><td><span class="stars">'+st+'</span> <span style="font-size:13px;color:var(--text3)">'+(p.reviewCount||0)+'</span></td><td><span class="badge '+(vs.length?'badge-a':'badge-gray')+'">'+vs.length+'</span></td><td><button class="btn btn-ghost btn-sm" onclick="openD(\''+p.id+'\')">Ver</button></td></tr>';}).join(''):'<tr><td colspan="9" style="text-align:center;color:var(--text3);padding:32px">Sin prospectos. <span style="color:var(--accent);cursor:pointer" onclick="openAddP()">Agregar →</span></td></tr>';
   // Mobile — cards with clickable phone links
   g('mob-p').innerHTML=ps.length?ps.map(function(p){
     var vs=S.vis.filter(function(v){return v.prospectId===p.id;});
