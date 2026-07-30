@@ -655,7 +655,7 @@ select.form-control{appearance:none;background-image:url("data:image/svg+xml,%3C
     </div>
     <div class="modal-foot">
       <button class="btn btn-ghost btn-sm" onclick="editCur()">Editar</button>
-      <button class="btn btn-danger btn-sm" onclick="delCur()">Eliminar</button>
+      <button class="btn btn-danger btn-sm" id="btn-del-p" onclick="delCur()">Eliminar</button>
       <button class="btn btn-primary btn-sm" onclick="cm('m-d')">Cerrar</button>
     </div>
   </div>
@@ -978,7 +978,7 @@ function toggleSelAll(on){
 }
 function toggleSelDay(on){
   var d=g('dc-date')?g('dc-date').value:'';
-  S.vis.filter(function(v){return String(v.fecha).slice(0,10)===d;}).forEach(function(v){
+  S.vis.filter(function(v){return dayKey(v.fecha)===d;}).forEach(function(v){
     var p=S.prosp.find(function(x2){return x2.id===v.prospectId;});
     if(!p||!hasEmail(p)) return;
     if(on) SELP[p.id]=true; else delete SELP[p.id];
@@ -1092,7 +1092,7 @@ function renderDayContacts(){
   var el=g('dc-date'); if(!el) return;
   if(!el.value) el.value=todayStr();
   var d=el.value;
-  var day=S.vis.filter(function(v){return String(v.fecha).slice(0,10)===d;});
+  var day=S.vis.filter(function(v){return dayKey(v.fecha)===d;});
   var visitas=day.filter(function(v){return v.estado==='Visitado';}).length;
   var llamadas=day.filter(function(v){return v.estado==='Seguimiento';}).length;
   if(g('k-dc-vis'))g('k-dc-vis').textContent=visitas;
@@ -1105,7 +1105,7 @@ function renderDash(){
   var _dcEl=g('dc-date');
   if(_dcEl&&!_dcEl.value)_dcEl.value=todayStr();
   var _day=_dcEl?_dcEl.value:todayStr();
-  var rec=S.vis.filter(function(v){return String(v.fecha).slice(0,10)===_day;}).sort(function(a,b){return String(b.fecha)>String(a.fecha)?1:-1;});
+  var rec=S.vis.filter(function(v){return dayKey(v.fecha)===_day;}).sort(function(a,b){return String(b.fecha)>String(a.fecha)?1:-1;});
   g('tb-rec').innerHTML=rec.length?rec.map(function(v){var p=S.prosp.find(function(x){return x.id===v.prospectId;})||{nombre:'?',ciudad:'',id:''};return'<tr><td>'+(p.id&&hasEmail(p)?'<input type="checkbox" '+(SELP[p.id]?'checked ':'')+'onclick="event.stopPropagation();toggleSelP(\''+p.id+'\',this.checked)" style="width:15px;height:15px;cursor:pointer">':'<input type="checkbox" disabled title="Sin email registrado" style="width:15px;height:15px;opacity:.25;cursor:not-allowed">')+'</td><td style="font-weight:500">'+(p.id?'<span style="cursor:pointer;color:#1565FF" onclick="openD(\''+p.id+'\')">'+x(p.nombre)+'</span>':x(p.nombre))+'</td><td><span class="badge badge-b">'+x(p.ciudad)+'</span></td><td class="mono">'+fd(v.fecha)+'</td><td style="color:var(--text3)">'+x(v.usuario)+'</td><td><span class="badge '+(SC[v.estado]||'badge-gray')+'">'+x(estLbl(v.estado))+'</span></td><td style="color:var(--text2);max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+x(v.notas)+'</td></tr>';}).join(''):'<tr><td colspan="7" style="text-align:center;color:var(--text3);padding:24px">Sin contactos registrados este día</td></tr>';
   g('mob-rec').innerHTML=rec.length?rec.map(function(v){var p=S.prosp.find(function(x){return x.id===v.prospectId;})||{nombre:'?',ciudad:''};return'<div class="pcard" onclick="openD(\''+p.id+'\')">'+'<div class="pcard-name">'+x(p.nombre)+'</div>'+'<div class="pcard-tags"><span class="badge badge-b">'+x(p.ciudad)+'</span><span class="badge '+(SC[v.estado]||'badge-gray')+'">'+x(estLbl(v.estado))+'</span></div>'+'<div class="pcard-row"><span style="color:var(--text3)">'+fd(v.fecha)+'</span><span>'+x(v.usuario)+'</span></div></div>';}).join(''):'<div style="text-align:center;padding:24px;color:var(--text3)">Sin contactos este día</div>';
   renderDayContacts();
@@ -1187,6 +1187,7 @@ function renderAj(){
 function openD(id){
   var p=S.prosp.find(function(x){return x.id===id;});if(!p)return;
   S.viewId=id;
+  var _bd=g('btn-del-p'); if(_bd) _bd.style.display=(S.user&&S.user.rol==='admin')?'':'none';
   g('md-n').textContent=p.nombre;
   g('md-c').textContent=(p.ciudad||'')+(p.zipcode?' '+p.zipcode:'')+(p.telefono?' · '+p.telefono:'');
   var st='★'.repeat(Math.round(p.rating||0))+'☆'.repeat(5-Math.round(p.rating||0));
@@ -1274,6 +1275,7 @@ async function saveP(){
   btn.innerHTML='Guardar Oficina';btn.disabled=false;
 }
 async function delCur(){
+  if(!S.user || S.user.rol!=='admin'){ toast('Solo un administrador puede eliminar oficinas','err'); return; }
   if(!confirm('¿Eliminar esta oficina y todas sus visitas?'))return;
   var delId=S.viewId;
   try{
@@ -1293,7 +1295,7 @@ function openAddV(){g('fv-f').value=nowDT();g('fv-n').value='';g('fv-e').value='
 function openEditVisit(id){
   var v=S.vis.find(function(x){return x.id===id;}); if(!v) return;
   S.editVisitId=id;
-  g('ev-f').value=(v.fecha&&String(v.fecha).indexOf('T')<0)?v.fecha+'T12:00':(v.fecha||'');
+  g('ev-f').value=dtVal(v.fecha)||(todayStr()+'T12:00');
   g('ev-e').value=v.estado||'Visitado';
   g('ev-n').value=v.notas||'';
   om('m-ev');
@@ -1512,7 +1514,34 @@ function om(id){g(id).classList.add('open');}
 function cm(id){g(id).classList.remove('open');}
 function g(id){return document.getElementById(id);}
 function x(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
-function fd(d){if(!d)return'—';try{var hasT=String(d).indexOf('T')>=0;var dt=new Date(hasT?d:(d+'T12:00:00'));var f=dt.toLocaleDateString('es-ES',{day:'2-digit',month:'short',year:'numeric'});return hasT?f+' · '+dt.toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit'}):f;}catch(e){return d;}}
+function parseFecha(d){
+  var s=String(d||'').trim(); if(!s) return null;
+  var hasTime=/[T ]\d{1,2}:\d{2}/.test(s);
+  var dt=new Date(hasTime ? s.replace(' ','T') : (s+'T12:00:00'));
+  if(isNaN(dt.getTime())) dt=new Date(s);
+  if(isNaN(dt.getTime())) return null;
+  dt._hasTime=hasTime;
+  return dt;
+}
+function fd(d){
+  if(!d) return '—';
+  var dt=parseFecha(d);
+  if(!dt) return String(d);
+  var f=dt.toLocaleDateString('es-ES',{day:'2-digit',month:'short',year:'numeric'});
+  return dt._hasTime ? f+' · '+dt.toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit'}) : f;
+}
+function dayKey(d){
+  var dt=parseFecha(d);
+  if(!dt) return String(d||'').slice(0,10);
+  var p=function(n){return String(n).padStart(2,'0');};
+  return dt.getFullYear()+'-'+p(dt.getMonth()+1)+'-'+p(dt.getDate());
+}
+function dtVal(d){
+  var dt=parseFecha(d);
+  if(!dt) return '';
+  var p=function(n){return String(n).padStart(2,'0');};
+  return dt.getFullYear()+'-'+p(dt.getMonth()+1)+'-'+p(dt.getDate())+'T'+p(dt.getHours())+':'+p(dt.getMinutes());
+}
 function nowDT(){var d=new Date();var p=function(n){return String(n).padStart(2,'0');};return d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate())+'T'+p(d.getHours())+':'+p(d.getMinutes());}
 function todayStr(){var d=new Date();var p=function(n){return String(n).padStart(2,'0');};return d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate());}
 function toast(msg,type){var t=g('toast');t.textContent=msg;t.className='toast '+(type||'')+' show';setTimeout(function(){t.classList.remove('show');},3000);}
