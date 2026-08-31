@@ -113,6 +113,24 @@ tr:hover td{background:rgba(0,0,0,.05);}
 .badge-a{background:rgba(245,158,11,.12);color:var(--accent3);}
 .badge-r{background:rgba(248,113,113,.12);color:var(--danger);}
 .badge-gray{background:var(--surface3);color:var(--text2);}
+.badge-ok{background:rgba(15,122,90,.14);color:#0F7A5A;}
+.badge-x{background:rgba(11,34,51,.10);color:#0B2233;}
+.badge-vis{background:rgba(15,122,90,.15);color:#0F7A5A;font-weight:600;}
+.badge-lla{background:rgba(14,134,180,.14);color:#0E86B4;}
+.badge-buz{background:rgba(168,91,0,.14);color:#A85B00;}
+.badge-ema{background:rgba(109,74,168,.14);color:#6D4AA8;}
+tr.fila-visita td{background:rgba(15,122,90,.07);}
+tr.fila-visita td:first-child{box-shadow:inset 3px 0 0 #0F7A5A;}
+.pcard.es-visita{border-left:3px solid #0F7A5A;}
+.visit-card.es-visita{border-left:3px solid #0F7A5A;}
+.daynav{display:flex;align-items:center;gap:6px;flex-wrap:wrap;}
+.dn-date{background:var(--surface2);border:1px solid var(--border);color:var(--text);
+  border-radius:8px;padding:6px 10px;font-family:'Inter',sans-serif;font-size:14px;outline:none;}
+.dn-btn{background:var(--surface2);border:1px solid var(--border);color:var(--text2);
+  border-radius:8px;padding:5px 12px;font-size:15px;line-height:1.2;cursor:pointer;font-family:inherit;}
+.dn-btn:hover{background:var(--surface3);color:var(--text);}
+.dn-cuenta{font-size:13px;color:var(--text3);margin-left:2px;}
+@media(max-width:720px){.daynav{width:100%;justify-content:space-between;}}
 .stars{color:var(--accent3);font-size:14px;}
 
 /* ── BUTTONS ── */
@@ -617,13 +635,21 @@ h1,h2,h3{font-family:'Plus Jakarta Sans',sans-serif;font-weight:800;letter-spaci
         <div class="status-bar"><div class="s-dot warn" id="s-dot"></div><span id="s-txt">Listo</span></div>
         <div class="kpi-row">
           <div class="kpi clickable" onclick="navFromKPI('prospectos')"><div class="kpi-label">Prospectos</div><div class="kpi-val g" id="k-tot">—</div><div class="kpi-sub">registrados</div></div>
-          <div class="kpi clickable" onclick="navFromKPI('visitados')"><div class="kpi-label">Con Visitas</div><div class="kpi-val b" id="k-vis">—</div><div class="kpi-sub">al menos 1</div></div>
+          <div class="kpi clickable" onclick="navFromKPI('visitados')"><div class="kpi-label">Con Contactos</div><div class="kpi-val b" id="k-vis">—</div><div class="kpi-sub">al menos 1</div></div>
           <div class="kpi clickable" onclick="navFromKPI('ciudades')"><div class="kpi-label">Ciudades</div><div class="kpi-val a" id="k-cit">—</div><div class="kpi-sub">activas</div></div>
-          <div class="kpi"><div class="kpi-label">Visitas</div><div class="kpi-val" id="k-vt">—</div><div class="kpi-sub">totales</div></div>
+          <div class="kpi"><div class="kpi-label">Contactos</div><div class="kpi-val" id="k-vt">—</div><div class="kpi-sub">totales</div></div>
         </div>
         <div class="tbl-wrap desk">
-          <div class="tbl-head"><div class="tbl-title">Últimas Visitas</div></div>
-          <div class="tbl-scroll"><table><thead><tr><th>Práctica</th><th>Ciudad</th><th>Fecha</th><th>Agente</th><th>Estado</th><th>Notas</th></tr></thead><tbody id="tb-rec"></tbody></table></div>
+          <div class="tbl-head">
+            <div><div class="tbl-title">Contactos del día</div><div class="dn-cuenta" id="dash-cuenta">—</div></div>
+            <div class="daynav">
+              <button class="dn-btn" onclick="dashDia(-1)" title="Día anterior">‹</button>
+              <input type="date" class="dn-date" id="dash-fecha" onchange="renderDash()">
+              <button class="dn-btn" onclick="dashDia(1)" title="Día siguiente">›</button>
+              <button class="dn-btn" onclick="dashHoy()">Hoy</button>
+            </div>
+          </div>
+          <div class="tbl-scroll"><table><thead><tr><th>Tipo</th><th>Práctica</th><th>Ciudad</th><th>Hora</th><th>Agente</th><th>Estado</th><th>Notas</th></tr></thead><tbody id="tb-rec"></tbody></table></div>
         </div>
         <div class="mob-only" id="mob-rec"></div>
       </div>
@@ -773,8 +799,8 @@ h1,h2,h3{font-family:'Plus Jakarta Sans',sans-serif;font-weight:800;letter-spaci
     <div class="modal-body">
       <div class="detail-grid" id="md-g"></div>
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;margin-top:6px;flex-wrap:wrap;gap:8px">
-        <div style="font-size:13px;text-transform:uppercase;letter-spacing:.1em;color:var(--text3)">Historial de Visitas</div>
-        <button class="btn btn-primary btn-sm" onclick="openAddV()">+ Registrar Visita</button>
+        <div style="font-size:13px;text-transform:uppercase;letter-spacing:.1em;color:var(--text3)">Historial de Contactos</div>
+        <button class="btn btn-primary btn-sm" onclick="openAddV()">+ Registrar Contacto</button>
       </div>
       <div id="md-v"></div>
     </div>
@@ -789,20 +815,24 @@ h1,h2,h3{font-family:'Plus Jakarta Sans',sans-serif;font-weight:800;letter-spaci
 <!-- MODAL: VISITA -->
 <div class="overlay" id="m-v">
   <div class="modal" style="max-width:540px">
-    <div class="modal-head"><div class="modal-title">Registrar Visita</div><button class="modal-close" onclick="cm('m-v')">✕</button></div>
+    <div class="modal-head"><div class="modal-title">Registrar Contacto</div><button class="modal-close" onclick="cm('m-v')">✕</button></div>
     <div class="modal-body">
       <div class="form-row">
         <div class="form-group"><label class="form-label">Fecha *</label><input class="form-control" type="date" id="fv-f"></div>
-        <div class="form-group"><label class="form-label">Estado</label>
-          <select class="form-control" id="fv-e">
-            <option>Visitado</option><option>Interesado</option><option>Seguimiento</option>
-            <option>No disponible</option><option>No interesado</option><option>Cliente ✓</option>
+        <div class="form-group"><label class="form-label">Tipo de contacto</label>
+          <select class="form-control" id="fv-t">
+            <option>Llamada</option><option>Visita</option><option>Buzón de voz</option><option>Email</option>
           </select>
         </div>
       </div>
+      <div class="form-group"><label class="form-label">Estado</label>
+        <select class="form-control" id="fv-e">
+          <option>Seguimiento</option><option>Interesado</option><option>No disponible</option><option>No interesado</option><option>Descartado</option><option>Cliente</option>
+        </select>
+      </div>
       <div class="form-group"><label class="form-label">Notas *</label><textarea class="form-control" id="fv-n" rows="4" placeholder="¿Con quién habló? ¿Cuál fue el resultado?..."></textarea></div>
     </div>
-    <div class="modal-foot"><button class="btn btn-ghost" onclick="cm('m-v')">Cancelar</button><button class="btn btn-primary" onclick="saveV()">Guardar Visita</button></div>
+    <div class="modal-foot"><button class="btn btn-ghost" onclick="cm('m-v')">Cancelar</button><button class="btn btn-primary" onclick="saveV()">Guardar Contacto</button></div>
   </div>
 </div>
 
@@ -847,16 +877,20 @@ h1,h2,h3{font-family:'Plus Jakarta Sans',sans-serif;font-weight:800;letter-spaci
 <!-- MODAL: EDITAR VISITA -->
 <div class="overlay" id="m-ev">
   <div class="modal" style="max-width:520px">
-    <div class="modal-head"><div class="modal-title">Editar Visita</div><button class="modal-close" onclick="cm('m-ev')">✕</button></div>
+    <div class="modal-head"><div class="modal-title">Editar Contacto</div><button class="modal-close" onclick="cm('m-ev')">✕</button></div>
     <div class="modal-body">
       <div class="form-row">
         <div class="form-group"><label class="form-label">Fecha *</label><input class="form-control" type="date" id="ev-f"></div>
-        <div class="form-group"><label class="form-label">Estado</label>
-          <select class="form-control" id="ev-e">
-            <option>Visitado</option><option>Interesado</option><option>Seguimiento</option>
-            <option>No disponible</option><option>No interesado</option><option>Cliente ✓</option>
+        <div class="form-group"><label class="form-label">Tipo de contacto</label>
+          <select class="form-control" id="ev-t">
+            <option>Llamada</option><option>Visita</option><option>Buzón de voz</option><option>Email</option>
           </select>
         </div>
+      </div>
+      <div class="form-group"><label class="form-label">Estado</label>
+        <select class="form-control" id="ev-e">
+          <option>Seguimiento</option><option>Interesado</option><option>No disponible</option><option>No interesado</option><option>Descartado</option><option>Cliente</option>
+        </select>
       </div>
       <div class="form-group"><label class="form-label">Notas *</label><textarea class="form-control" id="ev-n" rows="4"></textarea></div>
     </div>
@@ -996,14 +1030,68 @@ function renderAll(){
   if(prev)agSel.value=prev;
 }
 
-var SC={Interesado:'badge-g','Cliente ✓':'badge-g',Visitado:'badge-b',Seguimiento:'badge-a','No disponible':'badge-gray','No interesado':'badge-r'};
+var SC={'Interesado':'badge-g','Cliente':'badge-ok','Cliente ✓':'badge-ok','Seguimiento':'badge-a','No disponible':'badge-gray','No interesado':'badge-r','Descartado':'badge-x','Visitado':'badge-b'};
+// ── Tipo de contacto ──
+var TC={'Visita':'badge-vis','Llamada':'badge-lla','Buzón de voz':'badge-buz','Buzon de voz':'badge-buz','Email':'badge-ema'};
+var TIPO_POR_DEFECTO='Llamada';
+function tipoDe(v){var s=v&&v.tipo?String(v.tipo).trim():'';return s||TIPO_POR_DEFECTO;}
+function claseTipo(v){return TC[tipoDe(v)]||'badge-gray';}
+function esVisita(v){return tipoDe(v)==='Visita';}
+// El dia se toma de los 10 primeros caracteres, igual que fd(), para que
+// agrupar y mostrar nunca discrepen.
+function fh(f){var m=/[T ](\d{1,2}):(\d{2})/.exec(String(f===null||f===undefined?'':f));
+  return m?(m[1].length<2?'0':'')+m[1]+':'+m[2]:'—';}
+function soloDia(f){return String(f===null||f===undefined?'':f).slice(0,10);}
+function ymd(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
+function hoyStr(){return ymd(new Date());}
+function dashDia(n){
+  var i=g('dash-fecha'); var b=(i.value||hoyStr()).split('-');
+  var d=new Date(+b[0],+b[1]-1,+b[2]); d.setDate(d.getDate()+n);
+  i.value=ymd(d); renderDash();
+}
+function dashHoy(){g('dash-fecha').value=hoyStr();renderDash();}
+function dashIr(f){g('dash-fecha').value=f;renderDash();}
 
 function renderDash(){
   var vis=new Set(S.vis.map(function(v){return v.prospectId;}));
-  g('k-tot').textContent=S.prosp.length;g('k-vis').textContent=vis.size;g('k-cit').textContent=S.cities.length;g('k-vt').textContent=S.vis.length;
-  var rec=[].concat(S.vis).sort(function(a,b){return String(b.fecha)>String(a.fecha)?1:-1;}).slice(0,8);
-  g('tb-rec').innerHTML=rec.length?rec.map(function(v){var p=S.prosp.find(function(x){return x.id===v.prospectId;})||{nombre:'?',ciudad:'',id:''};return'<tr><td style="font-weight:500">'+(p.id?'<span style="cursor:pointer;color:#0E86B4" onclick="openD(\''+p.id+'\')">'+x(p.nombre)+'</span>':x(p.nombre))+'</td><td><span class="badge badge-b">'+x(p.ciudad)+'</span></td><td class="mono">'+fd(v.fecha)+'</td><td style="color:var(--text3)">'+x(v.usuario)+'</td><td><span class="badge '+(SC[v.estado]||'badge-gray')+'">'+x(v.estado)+'</span></td><td style="color:var(--text2);max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+x(v.notas)+'</td></tr>';}).join(''):'<tr><td colspan="6" style="text-align:center;color:var(--text3);padding:24px">Sin visitas aún</td></tr>';
-  g('mob-rec').innerHTML=rec.length?rec.map(function(v){var p=S.prosp.find(function(x){return x.id===v.prospectId;})||{nombre:'?',ciudad:''};return'<div class="pcard" onclick="openD(\''+p.id+'\')">'+'<div class="pcard-name">'+x(p.nombre)+'</div>'+'<div class="pcard-tags"><span class="badge badge-b">'+x(p.ciudad)+'</span><span class="badge '+(SC[v.estado]||'badge-gray')+'">'+x(v.estado)+'</span></div>'+'<div class="pcard-row"><span style="color:var(--text3)">'+fd(v.fecha)+'</span><span>'+x(v.usuario)+'</span></div></div>';}).join(''):'<div style="text-align:center;padding:24px;color:var(--text3)">Sin visitas</div>';
+  g('k-tot').textContent=S.prosp.length;g('k-vis').textContent=vis.size;
+  g('k-cit').textContent=S.cities.length;g('k-vt').textContent=S.vis.length;
+  var inp=g('dash-fecha'); if(!inp) return;
+  if(!inp.value) inp.value=hoyStr();
+  var dia=inp.value;
+  var rec=S.vis.filter(function(v){return soloDia(v.fecha)===dia;})
+               .sort(function(a,b){return String(b.fecha)>String(a.fecha)?1:-1;});
+  var nv=rec.filter(esVisita).length;
+  g('dash-cuenta').textContent=rec.length
+    ? rec.length+' contacto'+(rec.length!==1?'s':'')+(nv?' · '+nv+' visita'+(nv!==1?'s':''):'')
+    : 'Sin actividad';
+  var vacio='Sin contactos este día.';
+  if(!rec.length){
+    var ant='';
+    S.vis.forEach(function(v){var f=soloDia(v.fecha); if(f && f<dia && f>ant) ant=f;});
+    if(ant) vacio+=' El anterior con actividad fue el <span style="color:var(--accent);'
+      +'cursor:pointer;text-decoration:underline" onclick="dashIr(\''+ant+'\')">'+fd(ant)+'</span>.';
+  }
+  g('tb-rec').innerHTML=rec.length?rec.map(function(v){
+    var p=S.prosp.find(function(q){return q.id===v.prospectId;})||{nombre:'?',ciudad:'',id:''};
+    return'<tr'+(esVisita(v)?' class="fila-visita"':'')+'>'
+      +'<td><span class="badge '+claseTipo(v)+'">'+x(tipoDe(v))+'</span></td>'
+      +'<td style="font-weight:500">'+(p.id?'<span style="cursor:pointer;color:#0E86B4" onclick="openD(\''+p.id+'\')">'+x(p.nombre)+'</span>':x(p.nombre))+'</td>'
+      +'<td><span class="badge badge-b">'+x(p.ciudad)+'</span></td>'
+      +'<td class="mono">'+fh(v.fecha)+'</td>'
+      +'<td style="color:var(--text3)">'+x(v.usuario)+'</td>'
+      +'<td><span class="badge '+(SC[v.estado]||'badge-gray')+'">'+x(v.estado)+'</span></td>'
+      +'<td style="color:var(--text2);max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+x(v.notas)+'</td></tr>';
+  }).join(''):'<tr><td colspan="7" style="text-align:center;color:var(--text3);padding:24px">'+vacio+'</td></tr>';
+  g('mob-rec').innerHTML=rec.length?rec.map(function(v){
+    var p=S.prosp.find(function(q){return q.id===v.prospectId;})||{nombre:'?',ciudad:'',id:''};
+    return'<div class="pcard'+(esVisita(v)?' es-visita':'')+'" onclick="openD(\''+p.id+'\')">'
+      +'<div class="pcard-name">'+x(p.nombre)+'</div>'
+      +'<div class="pcard-tags"><span class="badge '+claseTipo(v)+'">'+x(tipoDe(v))+'</span>'
+      +'<span class="badge badge-b">'+x(p.ciudad)+'</span>'
+      +'<span class="badge '+(SC[v.estado]||'badge-gray')+'">'+x(v.estado)+'</span></div>'
+      +'<div class="pcard-row"><span style="color:var(--text3)">'+fd(v.fecha)+'</span><span>'+x(v.usuario)+'</span></div></div>';
+  }).join(''):'<div style="text-align:center;padding:24px;color:var(--text3)">'+vacio+'</div>';
 }
 
 function renderP(){
@@ -1108,7 +1196,7 @@ function renderVL(){
   var vs=S.vis.filter(function(v){return v.prospectId===S.viewId;}).sort(function(a,b){return String(b.fecha)>String(a.fecha)?1:-1;});
   g('md-v').innerHTML=vs.length?vs.map(function(v){
     var canEdit=S.user&&(S.user.rol==='admin'||S.user.username===v.usuario);
-    return'<div class="visit-card">'
+    return'<div class="visit-card'+(esVisita(v)?' es-visita':'')+'">'
       +'<div class="visit-meta"><span class="visit-date">'+fd(v.fecha)+'</span><span class="visit-user">por '+x(v.usuario)+'</span>'
       +(canEdit?'<div style="display:flex;gap:5px;margin-left:auto">'
         +'<button class="btn btn-ghost btn-sm" style="padding:4px 8px;font-size:12px" onclick="openEditVisit(\''+v.id+'\')">✏️</button>'
@@ -1116,9 +1204,11 @@ function renderVL(){
         +'</div>':'')
       +'</div>'
       +'<div style="font-size:15px;color:var(--text);line-height:1.5">'+x(v.notas)+'</div>'
-      +'<div style="margin-top:8px"><span class="badge '+(SC[v.estado]||'badge-gray')+'">'+x(v.estado)+'</span></div>'
+      +'<div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap">'
+        +'<span class="badge '+claseTipo(v)+'">'+x(tipoDe(v))+'</span>'
+        +'<span class="badge '+(SC[v.estado]||'badge-gray')+'">'+x(v.estado)+'</span></div>'
       +'</div>';
-  }).join(''):'<div style="text-align:center;padding:24px;color:var(--text3)">Sin visitas aún</div>';
+  }).join(''):'<div style="text-align:center;padding:24px;color:var(--text3)">Sin contactos aún</div>';
 }
 
 // ══ PROSPECT CRUD ══
@@ -1181,14 +1271,15 @@ async function delCur(){
 }
 
 // ══ VISITS ══
-function openAddV(){g('fv-f').value=new Date().toISOString().split('T')[0];g('fv-n').value='';g('fv-e').value='Visitado';om('m-v');}
+function openAddV(){g('fv-f').value=hoyStr();g('fv-n').value='';g('fv-t').value=TIPO_POR_DEFECTO;g('fv-e').value='Seguimiento';om('m-v');}
 
 // ══ EDIT / DELETE VISITS ══
 function openEditVisit(id){
   var v=S.vis.find(function(x){return x.id===id;}); if(!v) return;
   S.editVisitId=id;
   g('ev-f').value=v.fecha||'';
-  g('ev-e').value=v.estado||'Visitado';
+  g('ev-t').value=TC[tipoDe(v)]?tipoDe(v):TIPO_POR_DEFECTO;
+  g('ev-e').value=SC[v.estado]&&v.estado!=='Visitado'&&v.estado!=='Cliente ✓'?v.estado:'Seguimiento';
   g('ev-n').value=v.notas||'';
   om('m-ev');
 }
@@ -1200,7 +1291,7 @@ async function saveEditVisit(){
   if(btn.disabled)return;
   btn.innerHTML='<span class="spin"></span> Guardando...';btn.disabled=true;
   try{
-    await apiCall('updateVisita',{data:{id:S.editVisitId,prospectId:v.prospectId,fecha:g('ev-f').value,estado:g('ev-e').value,notas:notas,usuario:v.usuario}});
+    await apiCall('updateVisita',{data:{id:S.editVisitId,prospectId:v.prospectId,fecha:g('ev-f').value,tipo:g('ev-t').value,estado:g('ev-e').value,notas:notas,usuario:v.usuario}});
     toast('Visita actualizada ✓');cm('m-ev');await loadAll();openD(S.viewId);
   }catch(e){toast('Error: '+e.message,'err');
   }finally{btn.innerHTML='Guardar Cambios';btn.disabled=false;}
@@ -1224,8 +1315,8 @@ async function saveV(){
   if(btn.disabled)return; // prevent double click
   btn.innerHTML='<span class="spin"></span> Guardando...';btn.disabled=true;
   try{
-    await apiCall('saveVisita',{data:{prospectId:S.viewId,fecha:g('fv-f').value,estado:g('fv-e').value,notas:notas,usuario:S.user.username}});
-    toast('Visita registrada ✓');cm('m-v');await loadAll();openD(S.viewId);
+    await apiCall('saveVisita',{data:{prospectId:S.viewId,fecha:g('fv-f').value,tipo:g('fv-t').value,estado:g('fv-e').value,notas:notas,usuario:S.user.username}});
+    toast('Contacto registrado ✓');cm('m-v');await loadAll();openD(S.viewId);
   }catch(e){toast('Error: '+e.message,'err');
   }finally{btn.innerHTML='Guardar Visita';btn.disabled=false;}
 }
