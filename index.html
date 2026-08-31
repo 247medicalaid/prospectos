@@ -64,11 +64,6 @@ body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;font-
 .sidebar-footer{margin-top:auto;padding:14px 18px 0;border-top:1px solid var(--border);font-size:13px;color:var(--text3);}
 
 /* ── LOGIN ── */
-#loginWrap{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px;background:radial-gradient(ellipse at 60% 40%,rgba(74,222,128,.06) 0%,transparent 60%)}
-.login-box{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:40px 36px;width:100%;max-width:380px;}
-.login-logo{font-family:'Plus Jakarta Sans',serif;font-size:24px;color:var(--accent);margin-bottom:4px;}
-.login-sub{font-size:15px;color:var(--text3);margin-bottom:20px;}
-.login-error{color:var(--danger);font-size:14px;margin-top:10px;display:none;}
 
 /* ── PAGES ── */
 .page{display:none;}.page.active{display:block;}
@@ -338,10 +333,6 @@ select.form-control{appearance:none;background-image:url("data:image/svg+xml,%3C
   .badge-gray{background:#DDE7EB;color:#0B2233;}
   .stars{color:#C2740B;}
   /* Login */
-  #loginWrap{background:#F5F8F9;}
-  .login-box{background:#FFFFFF;border:1px solid #DCE6EA;}
-  .login-logo{color:#0E86B4;}
-  .login-sub{color:#4A6478;}
   /* Pass toggle */
   .pass-toggle button{color:#4A6478;}
   /* Mob action button */
@@ -574,27 +565,7 @@ h1,h2,h3{font-family:'Plus Jakarta Sans',sans-serif;font-weight:800;letter-spaci
 <div class="sidebar-ov" id="sb-ov" onclick="toggleSB()"></div>
 
 <!-- LOGIN -->
-<div id="loginWrap">
-  <div class="login-box">
-    <div style="margin-bottom:20px"><span class="brandmark brandmark-claro"><img src="https://247medical-aid.com/logo-247-dark.svg" alt="24/7 Medical AID Call Center" style="height:42px"><span class="bm-fb"><b>24/7</b><i></i><u>Medical AID</u><small>CALL CENTER</small></span></span></div>
-    <div class="login-sub">Prospectos de Oficinas Médicas</div>
-    <div class="form-group" style="margin-bottom:13px">
-      <label class="form-label">Usuario</label>
-      <input class="form-control" id="lu" placeholder="Tu usuario" autocomplete="username">
-    </div>
-    <div class="form-group" style="margin-bottom:20px">
-      <label class="form-label">Contraseña</label>
-      <div class="pass-toggle">
-        <input class="form-control" type="password" id="lp" placeholder="••••" autocomplete="current-password" inputmode="numeric" maxlength="4" pattern="[0-9]{4}">
-        <button type="button" onclick="tgPass('lp',this)">👁</button>
-      </div>
-    </div>
-    <button class="btn btn-primary" style="width:100%;min-height:48px;font-size:16px" onclick="doLogin()" id="btn-login">Ingresar</button>
-    <div class="login-error" id="lerr">Usuario o contraseña incorrectos</div>
-  </div>
-</div>
 
-<!-- APP -->
 <div id="appWrap">
   <div class="app">
     <aside class="sidebar" id="sidebar">
@@ -633,8 +604,6 @@ h1,h2,h3{font-family:'Plus Jakarta Sans',sans-serif;font-weight:800;letter-spaci
       <div class="sidebar-footer">
         <div id="sf-u" style="font-weight:600;color:var(--text2);margin-bottom:2px;font-size:15px"></div>
         <div id="sf-r" style="color:var(--text3);margin-bottom:10px;font-size:13px"></div>
-        <button class="btn btn-ghost btn-sm" onclick="openChangePass()" style="width:100%;margin-bottom:6px">🔑 Cambiar Contraseña</button>
-        <button class="btn btn-ghost btn-sm" onclick="doLogout()" style="width:100%">Cerrar sesión</button>
       </div>
     </aside>
 
@@ -874,26 +843,6 @@ h1,h2,h3{font-family:'Plus Jakarta Sans',sans-serif;font-weight:800;letter-spaci
 </div>
 
 <!-- MODAL: CAMBIAR CONTRASEÑA -->
-<div class="overlay" id="m-cp">
-  <div class="modal" style="max-width:420px">
-    <div class="modal-head"><div class="modal-title">Cambiar Contraseña</div><button class="modal-close" onclick="cm('m-cp')">✕</button></div>
-    <div class="modal-body">
-      <div class="form-group" style="margin-bottom:11px">
-        <label class="form-label">Contraseña Actual *</label>
-        <div class="pass-toggle"><input class="form-control" type="password" id="cp-old" placeholder="••••" inputmode="numeric" maxlength="4" pattern="[0-9]{4}"><button type="button" onclick="tgPass('cp-old',this)">👁</button></div>
-      </div>
-      <div class="form-group" style="margin-bottom:11px">
-        <label class="form-label">Nueva Contraseña *</label>
-        <div class="pass-toggle"><input class="form-control" type="password" id="cp-new" placeholder="4 dígitos" inputmode="numeric" maxlength="4" pattern="[0-9]{4}"><button type="button" onclick="tgPass('cp-new',this)">👁</button></div>
-      </div>
-      <div class="form-group">
-        <label class="form-label">Confirmar Nueva Contraseña *</label>
-        <div class="pass-toggle"><input class="form-control" type="password" id="cp-conf" placeholder="Repite los 4 dígitos" inputmode="numeric" maxlength="4" pattern="[0-9]{4}"><button type="button" onclick="tgPass('cp-conf',this)">👁</button></div>
-      </div>
-    </div>
-    <div class="modal-foot"><button class="btn btn-ghost" onclick="cm('m-cp')">Cancelar</button><button class="btn btn-primary" onclick="doChangePass()" id="btn-cp">Cambiar Contraseña</button></div>
-  </div>
-</div>
 
 <!-- MODAL: EDITAR VISITA -->
 <div class="overlay" id="m-ev">
@@ -1015,15 +964,6 @@ function updateCtxBar(page){
 // ══ LOGIN ══
 // Esta app ya no autentica a nadie: el acceso lo concede el portal.
 // La función se conserva solo para que el formulario antiguo, que queda
-// oculto, no dé error si algo lo invoca.
-function doLogin(){
-  location.href = 'https://247medicalaid.github.io/';
-}
-function doLogout(){
-  if(window.PORTAL) return window.PORTAL.salir();
-  location.href='https://247medicalaid.github.io/';
-}
-g('lp').addEventListener('keydown',function(e){if(e.key==='Enter')doLogin();});
 
 // ══ LOAD ══
 async function loadAll(){
@@ -1277,21 +1217,6 @@ async function deleteVisit(id){
 }
 
 // ══ CHANGE PASSWORD ══
-function openChangePass(){g('cp-old').value='';g('cp-new').value='';g('cp-conf').value='';om('m-cp');}
-async function doChangePass(){
-  var old=g('cp-old').value,np=g('cp-new').value,conf=g('cp-conf').value;
-  if(!old||!np||!conf){toast('Completa todos los campos','err');return;}
-  if(!/^[0-9]{4}$/.test(np)){toast('La nueva contraseña debe ser exactamente 4 dígitos numéricos','err');return;}
-  if(np!==conf){toast('Las contraseñas nuevas no coinciden','err');return;}
-  var btn=g('btn-cp');
-  if(btn.disabled)return;
-  btn.innerHTML='<span class="spin"></span> Cambiando...';btn.disabled=true;
-  try{
-    await apiCall('changePassword',{id:S.user.id,oldPass:old,newPass:np});
-    toast('Contraseña cambiada ✓');cm('m-cp');
-  }catch(e){toast('Error: '+e.message,'err');}
-  btn.innerHTML='Cambiar Contraseña';btn.disabled=false;
-}
 async function saveV(){
   var notas=g('fv-n').value.trim();
   if(!notas){toast('Las notas son requeridas','err');return;}
@@ -1499,7 +1424,6 @@ function arrancarDesdePortal(){
     rol: p.esAdmin ? 'admin' : 'agente',
     ciudades: p.esAdmin ? [] : ciudades   // el administrador ve todas las ciudades
   };
-  g('loginWrap').style.display='none';
   g('appWrap').style.display='block';
   g('sf-u').textContent = S.user.nombre;
   g('sf-r').textContent = p.esAdmin ? 'Administrador' : 'Agente';
