@@ -1010,7 +1010,11 @@ async function loadAll(){
     S.pRows=pR;S.vRows=vR;S.uRows=uR;S.cRows=cR;
     S.prosp=toObjs(pR);S.vis=toObjs(vR);
     S.users=toObjs(uR).map(function(u){var a=(u.activo!==undefined&&u.activo!=='')?String(u.activo).toLowerCase():'si';return{id:u.id,nombre:u.nombre,username:u.username,rol:u.rol,ciudades:u.ciudades?String(u.ciudades).split(',').filter(Boolean):[],activo:a!=='no'&&a!=='0'&&a!=='false'};});
-    S.cities=toObjs(cR);
+    // El catalogo se ordena alfabeticamente aqui y no en cada vista, para que
+    // el selector, la pagina de Ciudades y las casillas por usuario coincidan.
+    // Se descartan las filas sin nombre: salian como una ciudad en blanco.
+    S.cities=toObjs(cR).filter(function(c){return c.nombre&&String(c.nombre).trim();})
+      .sort(function(a,b){return String(a.nombre).localeCompare(String(b.nombre),'es',{sensitivity:'base'});});
     fillCP();renderAll();
     setS('Sincronizado · '+new Date().toLocaleTimeString('es'),'ok');
   }catch(e){setS('Error: '+e.message,'err');toast('Error al cargar datos','err');}
@@ -1098,7 +1102,9 @@ function renderP(){
   var sr=(g('f-s').value||'').toLowerCase(),cf=(g('f-c')||{value:''}).value,sf=g('f-st').value,zf=(g('f-zip').value||'').trim(),ag=g('f-agent').value,sort=g('f-sort').value;
   var ps=S.prosp.filter(function(p){
     if(S.user&&S.user.rol!=='admin'&&S.user.ciudades&&S.user.ciudades.length&&!S.user.ciudades.includes(p.ciudad))return false;
-    if(sr&&!(p.nombre+p.doctores+p.telefono+p.email+p.manager+p.zipcode+p.telDoctor+p.telManager).toLowerCase().includes(sr))return false;
+    // Se incluyen ciudad y direccion: buscar 'Spring Hill' debe traer las
+    // oficinas de esa ciudad, no solo las que la llevan en el nombre.
+    if(sr&&!([p.nombre,p.doctores,p.telefono,p.email,p.manager,p.zipcode,p.telDoctor,p.telManager,p.ciudad,p.direccion].join(' ')).toLowerCase().includes(sr))return false;
     if(cf&&p.ciudad!==cf)return false;
     if(zf&&!String(p.zipcode||'').startsWith(zf))return false;
     var vs=S.vis.filter(function(v){return v.prospectId===p.id;});
