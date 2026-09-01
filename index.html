@@ -124,6 +124,20 @@ tr.fila-visita td:first-child{box-shadow:inset 3px 0 0 #0F7A5A;}
 .pcard.es-visita{border-left:3px solid #0F7A5A;}
 .visit-card.es-visita{border-left:3px solid #0F7A5A;}
 .daynav{display:flex;align-items:center;gap:6px;flex-wrap:wrap;}
+.chk-sel{width:15px;height:15px;cursor:pointer;accent-color:var(--accent);}
+.chk-sel:disabled{opacity:.25;cursor:not-allowed;}
+.col-chk{width:34px;}
+.marca-mail{margin-left:5px;font-size:12px;cursor:help;}
+.sel-bar{display:none;position:fixed;bottom:18px;left:50%;transform:translateX(-50%);z-index:60;
+  background:var(--ink,#04141F);color:#fff;border-radius:12px;padding:10px 18px;
+  box-shadow:0 10px 30px rgba(4,20,31,.35);align-items:center;gap:14px;}
+.sel-bar.abierta{display:flex;}
+.sel-bar .cuenta{font-weight:700;white-space:nowrap;}
+.em-caja{background:var(--surface2);border:1px solid var(--border);border-radius:8px;
+  padding:12px 14px;font-size:13px;line-height:1.6;}
+.em-ok{color:#1F7A4D;font-weight:700;} .em-no{color:var(--danger,#ED3237);font-weight:700;}
+.em-avi{color:#B26B00;font-weight:700;}
+@media(max-width:720px){.sel-bar{left:12px;right:12px;transform:none;justify-content:space-between;}}
 .dn-date{background:var(--surface2);border:1px solid var(--border);color:var(--text);
   border-radius:8px;padding:6px 10px;font-family:'Inter',sans-serif;font-size:14px;outline:none;}
 .dn-btn{background:var(--surface2);border:1px solid var(--border);color:var(--text2);
@@ -649,7 +663,7 @@ h1,h2,h3{font-family:'Plus Jakarta Sans',sans-serif;font-weight:800;letter-spaci
               <button class="dn-btn" onclick="dashHoy()">Hoy</button>
             </div>
           </div>
-          <div class="tbl-scroll"><table><thead><tr><th>Tipo</th><th>Práctica</th><th>Ciudad</th><th>Hora</th><th>Agente</th><th>Estado</th><th>Notas</th></tr></thead><tbody id="tb-rec"></tbody></table></div>
+          <div class="tbl-scroll"><table><thead><tr><th class="col-chk"><input type="checkbox" class="chk-sel" id="sel-dia" onclick="selDia(this.checked)" title="Seleccionar los contactos de este día que tienen email"></th><th>Tipo</th><th>Práctica</th><th>Ciudad</th><th>Hora</th><th>Agente</th><th>Estado</th><th>Notas</th></tr></thead><tbody id="tb-rec"></tbody></table></div>
         </div>
         <div class="mob-only" id="mob-rec"></div>
       </div>
@@ -689,7 +703,7 @@ h1,h2,h3{font-family:'Plus Jakarta Sans',sans-serif;font-weight:800;letter-spaci
         </div>
         <div class="tbl-wrap desk">
           <div class="tbl-head"><div class="tbl-title" id="p-cnt">Prospectos</div></div>
-          <div class="tbl-scroll"><table><thead><tr><th>Práctica</th><th>Ciudad</th><th>Zip</th><th>Doctores</th><th>Teléfono</th><th>Reviews</th><th>Visitas</th><th>Última Visita</th><th></th></tr></thead><tbody id="tb-p"></tbody></table></div>
+          <div class="tbl-scroll"><table><thead><tr><th class="col-chk"><input type="checkbox" class="chk-sel" id="sel-todos" onclick="selTodos(this.checked)" title="Seleccionar los que tienen email"></th><th>Práctica</th><th>Ciudad</th><th>Zip</th><th>Doctores</th><th>Teléfono</th><th>Reviews</th><th>Visitas</th><th>Última Visita</th><th></th></tr></thead><tbody id="tb-p"></tbody></table></div>
         </div>
         <div class="mob-only" id="mob-p"></div>
       </div>
@@ -737,6 +751,42 @@ h1,h2,h3{font-family:'Plus Jakarta Sans',sans-serif;font-weight:800;letter-spaci
 
 <!-- MODAL: PROSPECTO -->
 <!-- Columns: id,nombre,telefono,email,direccion,ciudad,zipcode,doctores,telDoctor,manager,telManager,frontdesk,reviewCount,rating,notas,creadoPor,creadoEn -->
+<!-- Barra de seleccion para el envio masivo -->
+<div class="sel-bar" id="sel-bar">
+  <span class="cuenta" id="sel-cuenta"></span>
+  <button class="btn btn-primary btn-sm" onclick="abrirEmail()">✉️ Enviar email</button>
+  <button class="btn btn-ghost btn-sm" style="color:#cfe0f1" onclick="limpiarSel()">Limpiar</button>
+</div>
+
+<div class="overlay" id="m-email">
+  <div class="modal" style="max-width:680px">
+    <div class="modal-head"><div class="modal-title">Enviar email a prospectos</div>
+      <button class="modal-close" onclick="cm('m-email')">✕</button></div>
+    <div class="modal-body">
+      <div id="em-resumen" style="margin-bottom:14px"></div>
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">Tu nombre (firma) *</label>
+          <input class="form-control" id="em-nombre" placeholder="Ej: Carlos Tobon"></div>
+        <div class="form-group"><label class="form-label">Tu cargo (firma) *</label>
+          <input class="form-control" id="em-cargo" placeholder="Ej: Business Development"></div>
+      </div>
+      <div class="form-group"><label class="form-label">Asunto — usa {{clinic}} para personalizar</label>
+        <input class="form-control" id="em-asunto" value="How many calls is {{clinic}} missing every day?"></div>
+      <div style="display:flex;gap:10px;margin:6px 0 12px;align-items:center">
+        <button class="btn btn-ghost btn-sm" onclick="vistaPreviaEmail()">Vista previa</button>
+        <span id="em-info" style="font-size:12px;color:var(--text3)"></span>
+      </div>
+      <iframe id="em-vista" title="Vista previa del correo" style="display:none;width:100%;height:340px;
+        border:1px solid var(--border);border-radius:8px;background:#fff"></iframe>
+      <div id="em-progreso" style="display:none;margin-top:12px;font-size:13px"></div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" onclick="cm('m-email')">Cancelar</button>
+      <button class="btn btn-primary" id="em-enviar" onclick="enviarEmails()">Enviar</button>
+    </div>
+  </div>
+</div>
+
 <div class="overlay" id="m-p">
   <div class="modal modal-lg">
     <div class="modal-head"><div class="modal-title" id="mp-t">Nueva Oficina</div><button class="modal-close" onclick="cm('m-p')">✕</button></div>
@@ -1015,6 +1065,11 @@ async function loadAll(){
     // Se descartan las filas sin nombre: salian como una ciudad en blanco.
     S.cities=toObjs(cR).filter(function(c){return c.nombre&&String(c.nombre).trim();})
       .sort(function(a,b){return String(a.nombre).localeCompare(String(b.nombre),'es',{sensitivity:'base'});});
+    // El historial de envios se pide aparte: si Brevo o la hoja fallan, la app
+    // sigue funcionando y solo se pierde el marcador de "ya contactado".
+    S.emailLog = S.emailLog || [];
+    apiCall('emailLog',{}).then(function(j){ S.emailLog=j.log||[]; renderP(); renderDash(); })
+                          .catch(function(){});
     fillCP();renderAll();
     setS('Sincronizado · '+new Date().toLocaleTimeString('es'),'ok');
   }catch(e){setS('Error: '+e.message,'err');toast('Error al cargar datos','err');}
@@ -1079,14 +1134,16 @@ function renderDash(){
   g('tb-rec').innerHTML=rec.length?rec.map(function(v){
     var p=S.prosp.find(function(q){return q.id===v.prospectId;})||{nombre:'?',ciudad:'',id:''};
     return'<tr'+(esVisita(v)?' class="fila-visita"':'')+'>'
+      +'<td>'+casillaDe(p)+'</td>'
       +'<td><span class="badge '+claseTipo(v)+'">'+x(tipoDe(v))+'</span></td>'
-      +'<td style="font-weight:500">'+(p.id?'<span style="cursor:pointer;color:#0E86B4" onclick="openD(\''+p.id+'\')">'+x(p.nombre)+'</span>':x(p.nombre))+'</td>'
+      +'<td style="font-weight:500">'+(p.id?'<span style="cursor:pointer;color:#0E86B4" onclick="openD(\''+p.id+'\')">'+x(p.nombre)+'</span>':x(p.nombre))+marcaEmail(p.id)+'</td>'
       +'<td><span class="badge badge-b">'+x(p.ciudad)+'</span></td>'
       +'<td class="mono">'+fh(v.fecha)+'</td>'
       +'<td style="color:var(--text3)">'+x(v.usuario)+'</td>'
       +'<td><span class="badge '+(SC[v.estado]||'badge-gray')+'">'+x(v.estado)+'</span></td>'
       +'<td style="color:var(--text2);max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+x(v.notas)+'</td></tr>';
-  }).join(''):'<tr><td colspan="7" style="text-align:center;color:var(--text3);padding:24px">'+vacio+'</td></tr>';
+  }).join(''):'<tr><td colspan="8" style="text-align:center;color:var(--text3);padding:24px">'+vacio+'</td></tr>';
+  var _sd=g('sel-dia'); if(_sd) _sd.checked=false;
   g('mob-rec').innerHTML=rec.length?rec.map(function(v){
     var p=S.prosp.find(function(q){return q.id===v.prospectId;})||{nombre:'?',ciudad:'',id:''};
     return'<div class="pcard'+(esVisita(v)?' es-visita':'')+'" onclick="openD(\''+p.id+'\')">'
@@ -1131,7 +1188,9 @@ function renderP(){
   });
   var cnt=g('p-cnt');if(cnt)cnt.textContent='Prospectos ('+ps.length+')';
   // Desktop
-  g('tb-p').innerHTML=ps.length?ps.map(function(p){var vs=S.vis.filter(function(v){return v.prospectId===p.id;});var st='★'.repeat(Math.round(p.rating||0))+'☆'.repeat(5-Math.round(p.rating||0));return'<tr><td><span style="cursor:pointer;color:#0E86B4" onclick="openD(\''+p.id+'\')">'+x(p.nombre)+'</span></td><td><span class="badge badge-b">'+x(p.ciudad)+'</span></td><td class="mono">'+x(p.zipcode||'—')+'</td><td style="color:var(--text2)">'+x(p.doctores||'—')+'</td><td class="mono">'+x(p.telefono||'—')+'</td><td><span class="stars">'+st+'</span> <span style="font-size:13px;color:var(--text3)">'+(p.reviewCount||0)+'</span></td><td><span class="badge '+(vs.length?'badge-a':'badge-gray')+'">'+vs.length+'</span></td><td><button class="btn btn-ghost btn-sm" onclick="openD(\''+p.id+'\')">Ver</button></td></tr>';}).join(''):'<tr><td colspan="8" style="text-align:center;color:var(--text3);padding:32px">Sin prospectos. <span style="color:var(--accent);cursor:pointer" onclick="openAddP()">Agregar →</span></td></tr>';
+  window._idsVisibles = ps.map(function(p){return p.id;});
+  var _sa=g('sel-todos'); if(_sa) _sa.checked=false;
+  g('tb-p').innerHTML=ps.length?ps.map(function(p){var vs=S.vis.filter(function(v){return v.prospectId===p.id;});var st='★'.repeat(Math.round(p.rating||0))+'☆'.repeat(5-Math.round(p.rating||0));return'<tr><td>'+casillaDe(p)+'</td><td><span style="cursor:pointer;color:#0E86B4" onclick="openD(\''+p.id+'\')">'+x(p.nombre)+'</span>'+marcaEmail(p.id)+'</td><td><span class="badge badge-b">'+x(p.ciudad)+'</span></td><td class="mono">'+x(p.zipcode||'—')+'</td><td style="color:var(--text2)">'+x(p.doctores||'—')+'</td><td class="mono">'+x(p.telefono||'—')+'</td><td><span class="stars">'+st+'</span> <span style="font-size:13px;color:var(--text3)">'+(p.reviewCount||0)+'</span></td><td><span class="badge '+(vs.length?'badge-a':'badge-gray')+'">'+vs.length+'</span></td><td><button class="btn btn-ghost btn-sm" onclick="openD(\''+p.id+'\')">Ver</button></td></tr>';}).join(''):'<tr><td colspan="9" style="text-align:center;color:var(--text3);padding:32px">Sin prospectos. <span style="color:var(--accent);cursor:pointer" onclick="openAddP()">Agregar →</span></td></tr>';
   // Mobile — cards with clickable phone links
   g('mob-p').innerHTML=ps.length?ps.map(function(p){
     var vs=S.vis.filter(function(v){return v.prospectId===p.id;});
@@ -1484,6 +1543,152 @@ function navFromKPI(kind){
 }
 
 // ══ HELPERS ══
+// ══ ENVIO MASIVO DE EMAIL (Brevo) ══
+// El backend ya existia: sendEmails_, getEmailTemplate y getEmailLog_ en el
+// Apps Script, con las claves de Brevo en las propiedades del script.
+var SELP = {};
+
+function tieneEmail(p){ return !!(p && String(p.email||'').trim().indexOf('@')>0); }
+
+function casillaDe(p){
+  if(!p || !p.id) return '<input type="checkbox" class="chk-sel" disabled>';
+  if(!tieneEmail(p)) return '<input type="checkbox" class="chk-sel" disabled title="Sin email registrado">';
+  return '<input type="checkbox" class="chk-sel"'+(SELP[p.id]?' checked':'')
+       + ' onclick="event.stopPropagation();selUno(\''+p.id+'\',this.checked)">';
+}
+function marcaEmail(pid){
+  var f = ultimoEmail(pid);
+  return f ? '<span class="marca-mail" title="Email enviado el '+f+'">📧</span>' : '';
+}
+function ultimoEmail(pid){
+  if(!S.emailLog || !S.emailLog.length) return '';
+  var e = S.emailLog.filter(function(r){return r.prospectId===pid;})
+                    .sort(function(a,b){return String(b.fecha)>String(a.fecha)?1:-1;})[0];
+  return e ? String(e.fecha).slice(0,10) : '';
+}
+function statsEmail(pid){
+  var f=(S.emailLog||[]).filter(function(r){return r.prospectId===pid;});
+  if(!f.length) return {n:0,ultimo:''};
+  return {n:f.length, ultimo:fd(f.map(function(r){return String(r.fecha);}).sort().pop().slice(0,16))};
+}
+
+function selUno(id,on){ if(on) SELP[id]=true; else delete SELP[id]; barraSel(); }
+function selTodos(on){
+  (window._idsVisibles||[]).forEach(function(id){
+    var p=S.prosp.find(function(q){return q.id===id;});
+    if(!tieneEmail(p)) return;
+    if(on) SELP[id]=true; else delete SELP[id];
+  });
+  renderP(); barraSel();
+}
+// Desde el selector de dia del panel: toma los contactos de ese dia.
+function selDia(on){
+  var i=g('dash-fecha'); var dia=i?i.value:'';
+  S.vis.filter(function(v){return soloDia(v.fecha)===dia;}).forEach(function(v){
+    var p=S.prosp.find(function(q){return q.id===v.prospectId;});
+    if(!p||!tieneEmail(p)) return;
+    if(on) SELP[p.id]=true; else delete SELP[p.id];
+  });
+  renderDash(); barraSel();
+}
+function limpiarSel(){
+  SELP={};
+  ['sel-todos','sel-dia'].forEach(function(k){var e=g(k); if(e) e.checked=false;});
+  renderP(); renderDash(); barraSel();
+}
+function barraSel(){
+  var n=Object.keys(SELP).length, b=g('sel-bar');
+  if(!b) return;
+  b.classList.toggle('abierta', n>0);
+  g('sel-cuenta').textContent = n + ' seleccionado' + (n===1?'':'s');
+}
+
+function _emContacto(p){
+  var d=((p.doctores||'').split(/[,;\/]| y /)[0]||'').trim(); if(d) return d;
+  var m=(p.manager||'').trim(); if(m) return m;
+  return (p.nombre||'').trim() || 'Doctor';
+}
+function _emDestinatarios(){
+  var ok=[], sin=[], ya=[];
+  Object.keys(SELP).forEach(function(id){
+    var p=S.prosp.find(function(q){return q.id===id;}); if(!p) return;
+    var em=String(p.email||'').trim();
+    if(em.indexOf('@')<0){ sin.push(p.nombre); return; }
+    if(ultimoEmail(p.id)) ya.push(p.nombre);
+    ok.push({id:p.id, email:em, name:_emContacto(p), clinic:p.nombre});
+  });
+  return {ok:ok, sin:sin, ya:ya};
+}
+function abrirEmail(){
+  var r=_emDestinatarios();
+  var t='<div class="em-caja"><span class="em-ok">'+r.ok.length+' con email</span> recibirán el mensaje personalizado.';
+  if(r.sin.length) t+='<br><span class="em-no">'+r.sin.length+' sin email</span>, se omiten: '
+      + x(r.sin.slice(0,5).join(', ')) + (r.sin.length>5?'…':'');
+  if(r.ya.length){
+    t+='<br><span class="em-avi">'+r.ya.length+' ya recibieron un email antes:</span>';
+    r.ok.filter(function(q){return statsEmail(q.id).n>0;}).slice(0,6).forEach(function(q){
+      var s=statsEmail(q.id);
+      t+='<br><span style="font-size:12px;padding-left:14px">· '+x(q.clinic)+' — '+s.n+' envío'
+        +(s.n===1?'':'s')+', último '+s.ultimo+'</span>';
+    });
+    if(r.ya.length>6) t+='<br><span style="font-size:12px;padding-left:14px">… y '+(r.ya.length-6)+' más</span>';
+  }
+  g('em-resumen').innerHTML = t+'</div>';
+  g('em-progreso').style.display='none'; g('em-progreso').innerHTML='';
+  g('em-vista').style.display='none'; g('em-info').textContent='';
+  g('em-enviar').disabled = r.ok.length===0;
+  om('m-email');
+}
+function _emFundir(tpl, rec, nombre, cargo){
+  return String(tpl).split('{{name}}').join(x(rec.name))
+                    .split('{{clinic}}').join(x(rec.clinic))
+                    .split('{{yourName}}').join(x(nombre))
+                    .split('{{title}}').join(x(cargo));
+}
+async function vistaPreviaEmail(){
+  var r=_emDestinatarios();
+  if(!r.ok.length){ toast('No hay destinatarios con email','err'); return; }
+  try{
+    if(!window._plantillaEmail){
+      g('em-info').textContent='Cargando plantilla…';
+      var j=await apiCall('getEmailTemplate',{});
+      window._plantillaEmail=j.template;
+    }
+    var f=g('em-vista');
+    f.srcdoc=_emFundir(window._plantillaEmail, r.ok[0],
+      g('em-nombre').value||'[Tu nombre]', g('em-cargo').value||'[Tu cargo]');
+    f.style.display='block';
+    g('em-info').textContent='Vista previa: '+r.ok[0].clinic;
+  }catch(e){ toast('Error cargando la plantilla: '+e.message,'err'); g('em-info').textContent=''; }
+}
+async function enviarEmails(){
+  var r=_emDestinatarios();
+  var nom=(g('em-nombre').value||'').trim(), car=(g('em-cargo').value||'').trim(),
+      asu=(g('em-asunto').value||'').trim();
+  if(!nom||!car){ toast('Completa tu nombre y cargo para la firma','err'); return; }
+  if(!asu){ toast('Escribe el asunto','err'); return; }
+  if(!r.ok.length){ toast('No hay destinatarios con email','err'); return; }
+  if(!confirm('Se enviará el email a '+r.ok.length+' prospecto(s) desde tu correo corporativo.\n\n¿Confirmar envío?')) return;
+  var b=g('em-enviar'); b.disabled=true; b.textContent='Enviando…';
+  var pr=g('em-progreso'); pr.style.display='block';
+  var enviados=0, fallidos=[];
+  var lotes=[]; for(var i=0;i<r.ok.length;i+=20) lotes.push(r.ok.slice(i,i+20));
+  for(var k=0;k<lotes.length;k++){
+    pr.textContent='Enviando lote '+(k+1)+' de '+lotes.length+'… ('+enviados+' enviados)';
+    try{
+      var j=await apiCall('sendEmails',{data:{subject:asu, yourName:nom, title:car, recipients:lotes[k]}});
+      enviados += (j.sent||0);
+      (j.failed||[]).forEach(function(f){ fallidos.push(f); });
+      (j.log||[]).forEach(function(row){ S.emailLog=S.emailLog||[]; S.emailLog.push(row); });
+    }catch(e){ lotes[k].forEach(function(rc){ fallidos.push(rc.clinic+': '+e.message); }); }
+  }
+  pr.innerHTML='<b>'+enviados+' enviados.</b>'
+    + (fallidos.length ? '<br><span class="em-no">'+fallidos.length+' fallidos</span><br>'
+        +'<span style="font-size:11px;color:var(--text3)">'+x(fallidos.slice(0,8).join(' · '))+'</span>' : '');
+  b.disabled=false; b.textContent='Enviar';
+  limpiarSel();
+}
+
 function om(id){g(id).classList.add('open');}
 function cm(id){g(id).classList.remove('open');}
 function g(id){return document.getElementById(id);}
