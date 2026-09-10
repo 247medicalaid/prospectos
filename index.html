@@ -1098,9 +1098,48 @@ function claseTipo(v){return TC[tipoDe(v)]||'badge-gray';}
 function esVisita(v){return tipoDe(v)==='Visita';}
 // El dia se toma de los 10 primeros caracteres, igual que fd(), para que
 // agrupar y mostrar nunca discrepen.
-function fh(f){var m=/[T ](\d{1,2}):(\d{2})/.exec(String(f===null||f===undefined?'':f));
-  return m?(m[1].length<2?'0':'')+m[1]+':'+m[2]:'—';}
-function soloDia(f){return String(f===null||f===undefined?'':f).slice(0,10);}
+// ── FECHAS: TODO SE LEE EN HORA DE ORLANDO ──────────────────────────────────
+// La hoja guarda la fecha de dos maneras: como marca de tiempo en UTC
+// ('2026-08-15T13:06:00.000Z', que es como la escribe la app) y como texto local
+// ('2026-08-15' o '2026-08-15 9:06', de registros antiguos). Antes se leian los
+// caracteres tal cual, asi que una llamada de las 9:06 de la manana se mostraba
+// como las 13:06 — cuatro horas adelantada, la diferencia con UTC.
+//
+// enOrlando() devuelve siempre {dia:'YYYY-MM-DD', hora:'HH:MM' o null} ya en hora
+// de Orlando, y el resto de la app trabaja sobre eso. Que la hora sea null
+// significa que ese registro nunca guardo una: medianoche exacta no es una hora
+// real de trabajo, es lo que produce una fecha sin hora.
+var FMT_ET = null;
+function enOrlando(f){
+  var s = String(f===null||f===undefined?'':f).trim();
+  if(!s) return {dia:'', hora:null};
+  // Con zona horaria explicita hay que convertir, no recortar.
+  if(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/.test(s) && /(Z|[+-]\d{2}:?\d{2})$/.test(s)){
+    var d = new Date(s);
+    if(!isNaN(d.getTime())){
+      try{
+        if(!FMT_ET) FMT_ET = new Intl.DateTimeFormat('en-CA',{timeZone:'America/New_York',
+          year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hourCycle:'h23'});
+        var pp = {};
+        FMT_ET.formatToParts(d).forEach(function(t){ pp[t.type] = t.value; });
+        if(pp.year && pp.hour){
+          var hh = pp.hour + ':' + pp.minute;
+          return {dia: pp.year+'-'+pp.month+'-'+pp.day, hora: hh==='00:00' ? null : hh};
+        }
+      }catch(e){}
+    }
+  }
+  // Texto local: 'YYYY-MM-DD' o 'YYYY-MM-DD H:MM'
+  var m = /^(\d{4})-(\d{1,2})-(\d{1,2})(?:[T ](\d{1,2}):(\d{2}))?/.exec(s);
+  if(!m) return {dia: s.slice(0,10), hora: null};
+  var dia = m[1]+'-'+('0'+m[2]).slice(-2)+'-'+('0'+m[3]).slice(-2);
+  var hora = m[4]!==undefined ? ('0'+m[4]).slice(-2)+':'+m[5] : null;
+  return {dia: dia, hora: (hora==='00:00' ? null : hora)};
+}
+// La columna Hora. Un guion cuando el registro no guardo hora — antes se pintaba
+// un 04:00 que no era una hora, era la medianoche de Orlando vista en UTC.
+function fh(f){ return enOrlando(f).hora || '\u2014'; }
+function soloDia(f){ return enOrlando(f).dia; }
 function ymd(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
 function hoyStr(){return ymd(new Date());}
 function dashDia(n){
@@ -1336,13 +1375,22 @@ async function delCur(){
 }
 
 // ══ VISITS ══
+// El formulario solo pide el dia. Si el contacto es de hoy se guarda ademas la
+// hora exacta, que es de donde sale la columna Hora del dashboard; con una fecha
+// retroactiva no hay hora que inventar y se manda solo el dia.
+function fechaConHora(dia){
+  if(dia && dia===hoyStr()) return new Date().toISOString();
+  return dia;
+}
 function openAddV(){g('fv-f').value=hoyStr();g('fv-n').value='';g('fv-t').value=TIPO_POR_DEFECTO;g('fv-e').value='Seguimiento';om('m-v');}
 
 // ══ EDIT / DELETE VISITS ══
 function openEditVisit(id){
   var v=S.vis.find(function(x){return x.id===id;}); if(!v) return;
   S.editVisitId=id;
-  g('ev-f').value=v.fecha||'';
+  // El campo es de tipo fecha: si se le mete la marca completa ('2026-08-15T13:06:00.000Z')
+  // la rechaza y queda vacio, y al guardar se perdia la fecha de la gestion.
+  g('ev-f').value=soloDia(v.fecha);
   g('ev-t').value=TC[tipoDe(v)]?tipoDe(v):TIPO_POR_DEFECTO;
   g('ev-e').value=SC[v.estado]&&v.estado!=='Visitado'&&v.estado!=='Cliente ✓'?v.estado:'Seguimiento';
   g('ev-n').value=v.notas||'';
@@ -1356,7 +1404,12 @@ async function saveEditVisit(){
   if(btn.disabled)return;
   btn.innerHTML='<span class="spin"></span> Guardando...';btn.disabled=true;
   try{
-    await apiCall('updateVisita',{data:{id:S.editVisitId,prospectId:v.prospectId,fecha:g('ev-f').value,tipo:g('ev-t').value,estado:g('ev-e').value,notas:notas,usuario:v.usuario}});
+    // Si el dia no cambio se conserva la marca de tiempo original, con su hora.
+    // El formulario solo maneja el dia y la borraria.
+    var diaEd = g('ev-f').value;
+    var fechaEd = !diaEd ? (v.fecha || '')
+                : (diaEd === soloDia(v.fecha) ? (v.fecha || diaEd) : diaEd);
+    await apiCall('updateVisita',{data:{id:S.editVisitId,prospectId:v.prospectId,fecha:fechaEd,tipo:g('ev-t').value,estado:g('ev-e').value,notas:notas,usuario:v.usuario}});
     toast('Visita actualizada ✓');cm('m-ev');await loadAll();openD(S.viewId);
   }catch(e){toast('Error: '+e.message,'err');
   }finally{btn.innerHTML='Guardar Cambios';btn.disabled=false;}
@@ -1380,7 +1433,7 @@ async function saveV(){
   if(btn.disabled)return; // prevent double click
   btn.innerHTML='<span class="spin"></span> Guardando...';btn.disabled=true;
   try{
-    await apiCall('saveVisita',{data:{prospectId:S.viewId,fecha:g('fv-f').value,tipo:g('fv-t').value,estado:g('fv-e').value,notas:notas,usuario:S.user.username}});
+    await apiCall('saveVisita',{data:{prospectId:S.viewId,fecha:fechaConHora(g('fv-f').value),tipo:g('fv-t').value,estado:g('fv-e').value,notas:notas,usuario:S.user.username}});
     toast('Contacto registrado ✓');cm('m-v');await loadAll();openD(S.viewId);
   }catch(e){toast('Error: '+e.message,'err');
   }finally{btn.innerHTML='Guardar Visita';btn.disabled=false;}
@@ -1564,12 +1617,12 @@ function ultimoEmail(pid){
   if(!S.emailLog || !S.emailLog.length) return '';
   var e = S.emailLog.filter(function(r){return r.prospectId===pid;})
                     .sort(function(a,b){return String(b.fecha)>String(a.fecha)?1:-1;})[0];
-  return e ? String(e.fecha).slice(0,10) : '';
+  return e ? soloDia(e.fecha) : '';
 }
 function statsEmail(pid){
   var f=(S.emailLog||[]).filter(function(r){return r.prospectId===pid;});
   if(!f.length) return {n:0,ultimo:''};
-  return {n:f.length, ultimo:fd(f.map(function(r){return String(r.fecha);}).sort().pop().slice(0,16))};
+  return {n:f.length, ultimo:fd(f.map(function(r){return String(r.fecha);}).sort().pop())};
 }
 
 function selUno(id,on){ if(on) SELP[id]=true; else delete SELP[id]; barraSel(); }
@@ -1694,17 +1747,17 @@ function cm(id){g(id).classList.remove('open');}
 function g(id){return document.getElementById(id);}
 function x(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
 function fd(d){
-  // Las fechas de la hoja llegan en dos formas: 'YYYY-MM-DD' (las antiguas) y
-  // 'YYYY-MM-DD H:MM' (las que se registran desde julio de 2026). La version
-  // anterior solo entendia la primera y pintaba "Invalid Date" en el resto.
-  // Se arma la fecha por componentes, en hora local, para que no se corra un dia.
+  // El dia sale de enOrlando(), que ya resolvio la zona horaria. Antes esta
+  // funcion recortaba el texto, asi que un contacto de la tarde-noche podia
+  // aparecer al dia siguiente (en UTC ya habia cambiado la fecha).
   if(d===null||d===undefined)return'\u2014';
   var s=String(d).trim();
   if(!s)return'\u2014';
-  var m=s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})(?:[T ](\d{1,2}):(\d{2}))?/);
-  var f=m?new Date(+m[1],+m[2]-1,+m[3],m[4]!==undefined?+m[4]:12,m[5]!==undefined?+m[5]:0)
-         :new Date(s);
+  var dia=enOrlando(s).dia;
+  var m=/^(\d{4})-(\d{2})-(\d{2})$/.exec(dia);
   // Si no hay forma de interpretarla se muestra tal cual, nunca "Invalid Date".
+  if(!m) return s;
+  var f=new Date(+m[1],+m[2]-1,+m[3],12,0,0);
   if(isNaN(f.getTime()))return s;
   return f.toLocaleDateString('es-ES',{day:'2-digit',month:'short',year:'numeric'});
 }
