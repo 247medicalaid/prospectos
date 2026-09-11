@@ -970,6 +970,19 @@ async function sGet(range){
 }
 
 // WRITE — via Apps Script GET (no CORS issues from local files)
+// Apps Script falla de vez en cuando con un 404 que no significa nada — la misma
+// petición repetida funciona — y además tarda entre 2 y 45 segundos según el día.
+// Sin reintento, un solo tropiezo dejaba la app vacía con "Error de red: 404",
+// que es justo lo que pasaba al abrirla. El portal ya reintenta desde agosto;
+// esto le pone lo mismo a MedProspect.
+//
+// Solo se reintenta lo que puede ser pasajero: fallo de red y códigos HTTP de
+// error. Si el servidor responde bien pero dice que no (sesión caducada, sin
+// permiso), se falla al instante — insistir no arreglaría nada y solo haría
+// esperar de más.
+const API_INTENTOS = 3;
+const API_ESPERA   = 700;   // ms; crece con cada intento
+
 async function apiCall(action, params){
   var url = CFG.api + '?action=' + encodeURIComponent(action);
   if (params && params.data) {
@@ -980,18 +993,28 @@ async function apiCall(action, params){
       if (k !== 'data') url += '&' + k + '=' + encodeURIComponent(params[k]);
     });
   }
-  try {
-    var r = await fetch(url);
-    if (!r.ok) throw new Error('Error de red: ' + r.status);
-    var j = await r.json();
-    if (!j.ok) throw new Error(j.msg || 'Error en servidor');
-    return j;
-  } catch(e) {
-    if (e instanceof TypeError && e.message.toLowerCase().includes('fetch')) {
-      throw new Error('Error de conexión. Si abriste este archivo desde Dropbox o Drive, descárgalo primero al dispositivo y ábrelo desde ahí.');
+
+  var ultimoError = null;
+  for (var intento = 1; intento <= API_INTENTOS; intento++){
+    if (intento > 1) await new Promise(function(res){ setTimeout(res, API_ESPERA * (intento - 1)); });
+
+    var r;
+    try {
+      r = await fetch(url);
+    } catch(e) {
+      ultimoError = new Error('Sin conexión con el servidor. Comprueba tu internet.');
+      continue;                                   // pasajero → se reintenta
     }
-    throw e;
+    if (!r.ok) { ultimoError = new Error('Error de red: ' + r.status); continue; }
+
+    var j;
+    try { j = await r.json(); }
+    catch(e) { ultimoError = new Error('El servidor devolvió una respuesta ilegible'); continue; }
+
+    if (!j.ok) throw new Error(j.msg || 'Error en servidor');   // respuesta válida: no se insiste
+    return j;
   }
+  throw ultimoError || new Error('No se pudo conectar con el servidor');
 }
 
 function toObjs(rows){
@@ -1052,6 +1075,7 @@ function updateCtxBar(page){
 // ══ LOAD ══
 async function loadAll(){
   setS('Cargando...','warn');
+  _empezarRelojCarga();
   try{
     // La hoja 'Usuarios' de esta app quedó obsoleta: los usuarios y sus
     // permisos los administra el portal. Se deja la lista vacía a propósito.
@@ -1071,10 +1095,36 @@ async function loadAll(){
     apiCall('emailLog',{}).then(function(j){ S.emailLog=j.log||[]; renderP(); renderDash(); })
                           .catch(function(){});
     fillCP();renderAll();
+    _pararRelojCarga();
     setS('Sincronizado · '+new Date().toLocaleTimeString('es'),'ok');
-  }catch(e){setS('Error: '+e.message,'err');toast('Error al cargar datos','err');}
+  }catch(e){
+    _pararRelojCarga();
+    setS('No se pudo cargar: '+e.message,'err',true);
+    toast('Error al cargar datos','err');
+  }
 }
-function setS(msg,type){g('s-txt').textContent=msg;g('s-dot').className='s-dot'+(type==='warn'?' warn':type==='err'?' err':'');}
+function setS(msg,type,conReintento){
+  var el=g('s-txt');
+  if(conReintento){
+    el.innerHTML=x(msg)+' · <span style="color:#0E86B4;cursor:pointer;text-decoration:underline" onclick="loadAll()">Reintentar</span>';
+  } else {
+    el.textContent=msg;
+  }
+  g('s-dot').className='s-dot'+(type==='warn'?' warn':type==='err'?' err':'');
+}
+
+// Mientras se carga, el servidor puede tardar medio minuto. Sin señal alguna
+// parece que la app se colgó, así que a partir de los 6 segundos se va contando.
+var _relojCarga=null;
+function _empezarRelojCarga(){
+  clearInterval(_relojCarga);
+  var t0=Date.now();
+  _relojCarga=setInterval(function(){
+    var seg=Math.round((Date.now()-t0)/1000);
+    if(seg>=6) setS('Cargando… '+seg+' s · el servidor de Google está lento','warn');
+  },1000);
+}
+function _pararRelojCarga(){ clearInterval(_relojCarga); _relojCarga=null; }
 
 // ══ RENDER ══
 function renderAll(){
