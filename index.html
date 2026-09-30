@@ -432,6 +432,7 @@ h1,h2,h3{font-family:'Plus Jakarta Sans',sans-serif;font-weight:800;letter-spaci
 #pg-volver:hover{opacity:1;background:#0D3247}
 #pg-volver b{font-weight:700}
 #pg-volver span{color:#9FBECB;font-weight:600}
+#pg-volver.pg-fuera{display:none}
 @media print{#pg-volver{display:none}}
 </style>
 
@@ -445,12 +446,22 @@ h1,h2,h3{font-family:'Plus Jakarta Sans',sans-serif;font-weight:800;letter-spaci
    petición de datos. */
 (function () {
   var APP    = 'prospectos';
-  var API    = 'PEGA_AQUI_LA_URL_DEL_APPS_SCRIPT_DEL_PORTAL';
+  var API    = 'https://script.google.com/macros/s/AKfycbxEjSzo6gtP7rnVfc0JOAkZSvD6pTNYRvgcjoY_y_RrKMKOpRbDj4BBDMpzv_KuARxNNA/exec';
   var PORTAL = 'https://247medicalaid.github.io/';
   var CLAVE  = 'portal247.sesion';
 
   function alPortal(motivo) {
     try { if (motivo === 'expirada') localStorage.removeItem(CLAVE); } catch (e) {}
+    // Si la sesión caducó o le quitaron el acceso a esta app, también se tira
+    // lo que la app había guardado en el navegador: no debe quedar la base de
+    // prospectos en un equipo compartido.
+    if (motivo === 'expirada' || motivo === 'sinpermiso') {
+      try {
+        Object.keys(localStorage).forEach(function (k) {
+          if (k.indexOf('mp247_') === 0) localStorage.removeItem(k);
+        });
+      } catch (e) {}
+    }
     var destino = PORTAL + (motivo ? '?motivo=' + motivo + '&app=' + APP : '');
     location.replace(destino);
   }
@@ -524,7 +535,65 @@ h1,h2,h3{font-family:'Plus Jakarta Sans',sans-serif;font-weight:800;letter-spaci
     a.innerHTML = '&larr; <b>Portal</b> <span>&middot; ' +
       String(window.PORTAL.user.nombre || '').split(' ')[0] + '</span>';
     document.body.appendChild(a);
+    vigilarVentanas(a);
   }
+
+  // El boton flota sobre la esquina inferior derecha, que en el celular es
+  // justo donde las apps ponen sus propios botones cuando abren una ficha a
+  // pantalla completa. Mientras haya una ventana abierta el boton se aparta,
+  // y vuelve solo al cerrarla.
+  function vigilarVentanas(a) {
+    var SEL = '.overlay.open, .modal-overlay.show, .ag-panel.abierto, ' +
+              '.sidebar-ov.open, .sel-bar.abierta, dialog[open], ' +
+              '[role="dialog"][aria-modal="true"]';
+    var fuera = null;
+    function visible(el) {
+      if (!el.getClientRects().length) return false;
+      var cs = window.getComputedStyle(el);
+      return cs.visibility !== 'hidden' && cs.display !== 'none';
+    }
+    function revisar() {
+      var hay = false, n = document.querySelectorAll(SEL);
+      for (var i = 0; i < n.length; i++) { if (visible(n[i])) { hay = true; break; } }
+      if (hay === fuera) return;    // sin cambio no se toca el DOM: si no, el
+      fuera = hay;                  // observador se dispararia a si mismo sin fin
+      a.classList.toggle('pg-fuera', hay);
+    }
+    // Las mutaciones llegan a montones mientras la página se arma. Se junta
+    // todo en un solo repaso por cuadro para no mirar el DOM cien veces.
+    var pendiente = false;
+    function pedirRepaso() {
+      if (pendiente) return;
+      pendiente = true;
+      requestAnimationFrame(function () { pendiente = false; revisar(); });
+    }
+    try {
+      new MutationObserver(pedirRepaso).observe(document.body, {
+        subtree: true, childList: true,
+        attributes: true, attributeFilter: ['class', 'style', 'open', 'hidden']
+      });
+    } catch (e) {}
+    revisar();
+  }
+
+  // Arranque adelantado.
+  //
+  // Antes esto eran dos esperas, una detrás de la otra: primero el portal
+  // confirmaba la sesión con la pantalla tapada, y recién después la app
+  // empezaba a pedir sus datos. En el celular se sentía eterno.
+  //
+  // Ahora, habiendo sesión guardada en este navegador, la pantalla se destapa
+  // de una y la app pinta lo que tenga guardado, mientras el portal confirma
+  // por detrás. Lo guardado ya estaba en este equipo y lo puso este mismo
+  // usuario, así que enseñarlo no revela nada nuevo; y lo que vive en el
+  // servidor sigue igual de protegido, porque cada lectura lleva su token y el
+  // servidor lo valida por su cuenta. Si el portal contesta que la sesión ya
+  // no vale, se sale y de paso se borra lo guardado.
+  window.PORTAL.adelantar = true;
+  window.PORTAL.listo = true;
+  mostrar();
+  document.dispatchEvent(new CustomEvent('portal:adelantar'));
+  document.dispatchEvent(new CustomEvent('portal:listo', { detail: window.PORTAL }));
 
   // Confirmación contra el servidor: si el token caducó o el usuario fue
   // desactivado, se sale aunque el navegador todavía guarde la sesión.
@@ -544,16 +613,13 @@ h1,h2,h3{font-family:'Plus Jakarta Sans',sans-serif;font-weight:800;letter-spaci
     try {
       localStorage.setItem(CLAVE, JSON.stringify({ token: s.token, user: j.user, guardada: Date.now() }));
     } catch (e) {}
-    window.PORTAL.listo = true;
-    mostrar();
-    document.dispatchEvent(new CustomEvent('portal:listo', { detail: window.PORTAL }));
+    // El portal puede haber cambiado el rol o las ciudades asignadas desde la
+    // última vez. La app se entera por aquí y se reacomoda sin recargar.
+    document.dispatchEvent(new CustomEvent('portal:confirmado', { detail: window.PORTAL }));
   })
   .catch(function () {
-    // Sin conexión con el portal: se deja trabajar con la sesión local.
-    // Los datos igual no llegan si el servidor rechaza el token.
-    window.PORTAL.listo = true;
-    mostrar();
-    document.dispatchEvent(new CustomEvent('portal:listo', { detail: window.PORTAL }));
+    // Sin conexión con el portal: se sigue con la sesión local. Los datos
+    // igual no llegan si el servidor de la app rechaza el token.
   });
 })();
 </script>
@@ -1073,34 +1139,136 @@ function updateCtxBar(page){
 // La función se conserva solo para que el formulario antiguo, que queda
 
 // ══ LOAD ══
-async function loadAll(){
-  setS('Cargando...','warn');
-  _empezarRelojCarga();
+//
+// Abrir la app pedía tres lecturas al servidor de Google, que tarda entre 2 y
+// 45 segundos según el día, y encima esperaba a que el portal confirmara la
+// sesión antes de empezar. En el celular eso era medio minuto de pantalla
+// vacía. Ahora son tres cosas a la vez:
+//
+//   1. Lo último que se vio queda guardado en el navegador y se pinta al
+//      instante al abrir, con el aviso de que se está actualizando.
+//   2. Las lecturas arrancan apenas hay sesión guardada, sin esperar a que el
+//      portal responda (ver 'portal:adelantar' arriba).
+//   3. Si el servidor lo admite, las tres lecturas se piden en una sola vuelta.
+//
+// El dato fresco, cuando llega, reemplaza lo pintado y se vuelve a guardar.
+
+var MP_FORMATO = 1;                             // subir si cambia la forma guardada
+var MP_CLAVE   = 'mp247_cache_v' + MP_FORMATO;
+var MP_UNICA   = 'mp247_una_llamada';           // 'si' cuando el servidor admite leerTodo
+
+function leerCache(){
   try{
-    // La hoja 'Usuarios' de esta app quedó obsoleta: los usuarios y sus
-    // permisos los administra el portal. Se deja la lista vacía a propósito.
-    var[pR,vR,cR]=await Promise.all([sGet('Prospectos'),sGet('Visitas'),sGet('Ciudades')]);
-    var uR=[];
-    S.pRows=pR;S.vRows=vR;S.uRows=uR;S.cRows=cR;
-    S.prosp=toObjs(pR);S.vis=toObjs(vR);
-    S.users=toObjs(uR).map(function(u){var a=(u.activo!==undefined&&u.activo!=='')?String(u.activo).toLowerCase():'si';return{id:u.id,nombre:u.nombre,username:u.username,rol:u.rol,ciudades:u.ciudades?String(u.ciudades).split(',').filter(Boolean):[],activo:a!=='no'&&a!=='0'&&a!=='false'};});
-    // El catalogo se ordena alfabeticamente aqui y no en cada vista, para que
-    // el selector, la pagina de Ciudades y las casillas por usuario coincidan.
-    // Se descartan las filas sin nombre: salian como una ciudad en blanco.
-    S.cities=toObjs(cR).filter(function(c){return c.nombre&&String(c.nombre).trim();})
-      .sort(function(a,b){return String(a.nombre).localeCompare(String(b.nombre),'es',{sensitivity:'base'});});
+    var c = JSON.parse(localStorage.getItem(MP_CLAVE) || 'null');
+    if(!c || !Array.isArray(c.pR) || !Array.isArray(c.vR) || !Array.isArray(c.cR)) return null;
+    return c;
+  }catch(e){ return null; }
+}
+function guardarCache(pR,vR,cR){
+  try{
+    localStorage.setItem(MP_CLAVE, JSON.stringify({pR:pR,vR:vR,cR:cR,guardado:Date.now()}));
+  }catch(e){
+    // Sin espacio, o el navegador en modo privado. Se borra lo viejo y se
+    // sigue sin caché: esto nunca debe tumbar la app.
+    try{ localStorage.removeItem(MP_CLAVE); }catch(e2){}
+  }
+}
+function olvidarCache(){ try{ localStorage.removeItem(MP_CLAVE); }catch(e){} }
+
+function banderaUnica(){ try{ return localStorage.getItem(MP_UNICA); }catch(e){ return null; } }
+function ponerBandera(v){ try{ localStorage.setItem(MP_UNICA, v); }catch(e){} }
+
+// Pide las tres hojas. Con el servidor nuevo es una sola vuelta; con el viejo
+// son tres en paralelo, y se prueba por detrás si ya admite la vuelta única
+// para usarla la próxima vez. Así la app nunca se vuelve más lenta por probar.
+async function traerHojas(){
+  if(banderaUnica() === 'si'){
+    try{
+      var j = await apiCall('leerTodo',{});
+      if(j && j.hojas) return [j.hojas.Prospectos||[], j.hojas.Visitas||[], j.hojas.Ciudades||[]];
+      ponerBandera('no');                  // respondió, pero no con lo esperado
+    }catch(e){ ponerBandera('no'); }       // el servidor volvió atrás: a las tres
+  } else {
+    apiCall('leerTodo',{}).then(function(j){
+      if(j && j.hojas) ponerBandera('si');
+    }).catch(function(){});
+  }
+  return await Promise.all([sGet('Prospectos'),sGet('Visitas'),sGet('Ciudades')]);
+}
+
+// Adelanto: arranca en cuanto el portal avisa que hay sesión guardada, mucho
+// antes de que la app esté lista para pintar. Nunca rechaza —el resultado se
+// envuelve— para que nadie vea un error sin dueño mientras nadie lo espera.
+var _adelanto = null;
+function adelantarDatos(){
+  if(_adelanto) return;
+  _adelanto = traerHojas().then(function(r){ return {ok:true,  r:r}; },
+                                function(e){ return {ok:false, e:e}; });
+}
+// El guard dispara el aviso mientras se arma la página, antes de que este
+// bloque exista, así que además deja la marca puesta: se mira primero.
+if (window.PORTAL && window.PORTAL.adelantar) adelantarDatos();
+else document.addEventListener('portal:adelantar', adelantarDatos);
+
+// Reparte los datos por el estado de la app y repinta. Lo usan tanto el dato
+// guardado como el fresco, para que pinten exactamente igual.
+function aplicarDatos(pR,vR,cR){
+  // La hoja 'Usuarios' de esta app quedó obsoleta: los usuarios y sus
+  // permisos los administra el portal. Se deja la lista vacía a propósito.
+  var uR=[];
+  S.pRows=pR;S.vRows=vR;S.uRows=uR;S.cRows=cR;
+  S.prosp=toObjs(pR);S.vis=toObjs(vR);
+  S.users=toObjs(uR).map(function(u){var a=(u.activo!==undefined&&u.activo!=='')?String(u.activo).toLowerCase():'si';return{id:u.id,nombre:u.nombre,username:u.username,rol:u.rol,ciudades:u.ciudades?String(u.ciudades).split(',').filter(Boolean):[],activo:a!=='no'&&a!=='0'&&a!=='false'};});
+  // El catalogo se ordena alfabeticamente aqui y no en cada vista, para que
+  // el selector, la pagina de Ciudades y las casillas por usuario coincidan.
+  // Se descartan las filas sin nombre: salian como una ciudad en blanco.
+  S.cities=toObjs(cR).filter(function(c){return c.nombre&&String(c.nombre).trim();})
+    .sort(function(a,b){return String(a.nombre).localeCompare(String(b.nombre),'es',{sensitivity:'base'});});
+  fillCP();renderAll();
+}
+
+// 'deCache' solo lo pide el arranque. Los demás avisos (guardar una oficina,
+// registrar un contacto) llaman a loadAll() a secas: ahí pintar lo viejo un
+// instante sería mostrar justo lo que el usuario acaba de cambiar.
+async function loadAll(opciones){
+  var pintadoViejo = false;
+  if(opciones && opciones.deCache){
+    var c = leerCache();
+    if(c){
+      try{ aplicarDatos(c.pR,c.vR,c.cR); pintadoViejo = true; }
+      catch(e){ olvidarCache(); }        // guardado de una versión vieja: se tira
+    }
+  }
+  if(pintadoViejo) setS('Mostrando lo guardado · actualizando…','warn');
+  else { setS('Cargando...','warn'); _empezarRelojCarga(); }
+  try{
+    var pR,vR,cR;
+    if(_adelanto){
+      var res = _adelanto; _adelanto = null;
+      var a = await res;
+      if(a.ok){ pR=a.r[0]; vR=a.r[1]; cR=a.r[2]; } else { throw a.e; }
+    } else {
+      var tres = await traerHojas();
+      pR=tres[0]; vR=tres[1]; cR=tres[2];
+    }
     // El historial de envios se pide aparte: si Brevo o la hoja fallan, la app
     // sigue funcionando y solo se pierde el marcador de "ya contactado".
     S.emailLog = S.emailLog || [];
     apiCall('emailLog',{}).then(function(j){ S.emailLog=j.log||[]; renderP(); renderDash(); })
                           .catch(function(){});
-    fillCP();renderAll();
+    aplicarDatos(pR,vR,cR);
+    guardarCache(pR,vR,cR);
     _pararRelojCarga();
     setS('Sincronizado · '+new Date().toLocaleTimeString('es'),'ok');
   }catch(e){
     _pararRelojCarga();
-    setS('No se pudo cargar: '+e.message,'err',true);
-    toast('Error al cargar datos','err');
+    if(pintadoViejo){
+      // Hay algo en pantalla: se avisa que está viejo, pero no se borra.
+      setS('Sin actualizar: '+e.message+' · mostrando lo guardado','err',true);
+    } else {
+      setS('No se pudo cargar: '+e.message,'err',true);
+      toast('Error al cargar datos','err');
+    }
   }
 }
 function setS(msg,type,conReintento){
@@ -1835,10 +2003,29 @@ function arrancarDesdePortal(){
   if(g('mob-gear')) g('mob-gear').style.display='flex';
   if(!p.esAdmin) g('nav-aj').style.display='none';
   updateCtxBar('dashboard');
-  loadAll();
+  loadAll({ deCache: true });
 }
 if(window.PORTAL && window.PORTAL.listo) arrancarDesdePortal();
 else document.addEventListener('portal:listo', arrancarDesdePortal);
+
+// La app arranca con la sesión guardada en el navegador. Cuando el portal
+// confirma —un segundo después— puede traer un rol o unas ciudades distintas
+// a las de la última vez. Si cambió algo, se reacomoda la vista; si no, no se
+// toca nada, para no repintar por gusto.
+document.addEventListener('portal:confirmado', function(){
+  var p = window.PORTAL;
+  if(!p || !S.user) return;
+  var rol = p.esAdmin ? 'admin' : 'agente';
+  var ciudades = p.esAdmin ? [] : ((p.ajustes && Array.isArray(p.ajustes.ciudades)) ? p.ajustes.ciudades : []);
+  if(rol === S.user.rol && String(ciudades) === String(S.user.ciudades)) return;
+  S.user.rol = rol;
+  S.user.ciudades = ciudades;
+  S.user.nombre = p.user.nombre || S.user.nombre;
+  g('sf-u').textContent = S.user.nombre;
+  g('sf-r').textContent = p.esAdmin ? 'Administrador' : 'Agente';
+  g('nav-aj').style.display = p.esAdmin ? '' : 'none';
+  renderAll();
+});
 
 /* Si el logo del sitio no esta disponible se muestra el respaldo tipografico. */
 document.querySelectorAll('.brandmark').forEach(function(bm){
