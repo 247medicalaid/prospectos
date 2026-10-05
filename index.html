@@ -1016,6 +1016,8 @@ h1,h2,h3{font-family:'Plus Jakarta Sans',sans-serif;font-weight:800;letter-spaci
 
 <div class="toast" id="toast"></div>
 
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="../sb.js?v=3"></script>
 <script>
 // ══ CONFIG ══
 var CFG={
@@ -1049,7 +1051,7 @@ async function sGet(range){
 const API_INTENTOS = 3;
 const API_ESPERA   = 700;   // ms; crece con cada intento
 
-async function apiCall(action, params){
+async function apiCallGoogle(action, params){
   var url = CFG.api + '?action=' + encodeURIComponent(action);
   if (params && params.data) {
     url += '&data=' + encodeURIComponent(JSON.stringify(params.data));
@@ -1082,6 +1084,170 @@ async function apiCall(action, params){
   }
   throw ultimoError || new Error('No se pudo conectar con el servidor');
 }
+
+// ══ SUPABASE · MODO DOBLE (oct 2026) ══════════════════════════════════════════
+// Las lecturas y los guardados van a Supabase (menos de un segundo). Cada cambio
+// se copia además a la hoja de Google, por detrás y en orden, para poder volver
+// atrás. Si Supabase falla al guardar, este navegador vuelve a Google solo y lo
+// avisa. ?fuente=sheets fuerza Google; ?fuente=supabase vuelve a Supabase.
+// Los correos salen por Brevo desde Supabase (función prospectos-correo).
+var MP_FUENTE = 'mp247_fuente', MP_COLA = 'mp247_cola_google';
+(function(){ try{ var m=location.search.match(/[?&]fuente=(sheets|supabase)/); if(m) localStorage.setItem(MP_FUENTE, m[1]); }catch(e){} })();
+function mpFuente(){ try{ return localStorage.getItem(MP_FUENTE) === 'sheets' ? 'sheets' : 'supabase'; }catch(e){ return 'supabase'; } }
+var MP_ESTADO = { fuente: '', ms: 0, cola: 0 };
+
+async function mpSesion(){
+  if(!window.sb) throw mpErr('Supabase no está disponible en esta página');
+  if(window.sbPendiente){ try{ await window.sbPendiente; }catch(e){} }
+  var s = await window.sb.auth.getSession();
+  if(!s.data.session) throw mpErr('La sesión de Supabase no está activa: sal del portal y vuelve a entrar', true);
+  return s.data.session;
+}
+function mpErr(msg, sesion){ var e = new Error(msg); e.mpSesion = !!sesion; return e; }
+async function mpRpc(f, args){
+  await mpSesion();
+  var r = await window.sb.rpc(f, args || {});
+  if(r.error) throw mpErr(r.error.message, /permiso|JWT|session/i.test(r.error.message));
+  return r.data;
+}
+
+// ── Lecturas ──
+var MP_LEER = {
+  leerTodo: async function(){ var t = await mpRpc('prosp_leer'); return JSON.parse(t); },
+  leerRango: async function(p){ var j = JSON.parse(await mpRpc('prosp_leer')); return { ok: true, values: (j.hojas || {})[p.range] || [] }; },
+  emailLog: async function(){ return await mpRpc('prosp_email_log'); },
+  getEmailTemplate: async function(){ return await mpRpc('prosp_plantilla'); }
+};
+
+// ── Escrituras: Supabase primero (con confirmación) y la copia a Google en cola ──
+function mpId(prefijo){ return prefijo + Date.now(); }
+var MP_ESCRIBIR = {
+  saveProspecto: async function(p){
+    var d = Object.assign({}, p.data || {});
+    if(!d.id){ d.id = mpId('p'); }
+    if(!d.creadoEn){ d.creadoEn = new Date().toISOString(); }   // igual en los dos lados
+    var r = await mpRpc('prosp_guardar_prospecto', { d: d });
+    return { r: r, google: { action: 'saveProspecto', params: { data: d } } };
+  },
+  deleteProspecto: async function(p){
+    var r = await mpRpc('prosp_borrar_prospecto', { p_id: String(p.id) });
+    return { r: r, google: { action: 'deleteProspecto', params: { id: p.id } } };
+  },
+  saveVisita: async function(p){
+    var d = Object.assign({}, p.data || {}); if(!d.id){ d.id = mpId('v'); }
+    var r = await mpRpc('prosp_guardar_visita', { d: d });
+    return { r: r, google: { action: 'saveVisita', params: { data: d } } };
+  },
+  updateVisita: async function(p){
+    var r = await mpRpc('prosp_actualizar_visita', { d: p.data || {} });
+    return { r: r, google: { action: 'updateVisita', params: { data: p.data } } };
+  },
+  deleteVisita: async function(p){
+    var r = await mpRpc('prosp_borrar_visita', { p_id: String(p.id) });
+    return { r: r, google: { action: 'deleteVisita', params: { id: p.id } } };
+  },
+  saveCiudad: async function(p){
+    var id = mpId('c');
+    var r = await mpRpc('prosp_guardar_ciudad', { p_id: id, p_nombre: String(p.nombre || '') });
+    return { r: r, google: { action: 'saveCiudad', params: { nombre: p.nombre, id: id } } };
+  },
+  deleteCiudad: async function(p){
+    var r = await mpRpc('prosp_borrar_ciudad', { p_id: String(p.id) });
+    return { r: r, google: { action: 'deleteCiudad', params: { id: p.id } } };
+  }
+};
+
+// ── Correos por Brevo desde Supabase ──
+async function mpEnviarCorreos(p){
+  var ses = await mpSesion();
+  var r = await fetch(window.SB_URL + '/functions/v1/prospectos-correo', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + ses.access_token, 'apikey': window.SB_KEY },
+    body: JSON.stringify(p.data || {})
+  });
+  var j; try{ j = await r.json(); }catch(e){ throw new Error('El servidor de correos respondió ' + r.status); }
+  if(!j.ok) throw new Error(j.msg || ('Error ' + r.status));
+  // El historial también se copia a la hoja de Google (sin volver a enviar nada).
+  if(j.log && j.log.length){
+    mpEncolar({ action: 'registrarEmails', params: { data: j.log.map(function(l){ return [l.fecha, l.prospectId, l.clinica, l.email, l.asunto, (p.data && p.data.yourName) || '']; }) } });
+  }
+  return j;
+}
+
+// ── Cola de copias a Google (persistente, en orden) ──
+function mpLeerCola(){ try{ return JSON.parse(localStorage.getItem(MP_COLA) || '[]'); }catch(e){ return []; } }
+function mpGuardarCola(c){ try{ localStorage.setItem(MP_COLA, JSON.stringify(c)); }catch(e){} MP_ESTADO.cola = c.length; mpPintar(); }
+function mpEncolar(op){ var c = mpLeerCola(); op.t = Date.now(); op.intentos = 0; c.push(op); mpGuardarCola(c); mpProcesarCola(); }
+var _mpProcesando = false;
+async function mpProcesarCola(){
+  if(_mpProcesando) return;
+  // Una sola pestaña copia a la vez (si hay varias abiertas).
+  try{ var l = Number(localStorage.getItem(MP_COLA + '_lock') || 0); if(Date.now() - l < 60000) { setTimeout(mpProcesarCola, 61000); return; } localStorage.setItem(MP_COLA + '_lock', String(Date.now())); }catch(e){}
+  _mpProcesando = true;
+  try{
+    var c = mpLeerCola();
+    while(c.length){
+      var op = c[0];
+      try{ await apiCallGoogle(op.action, op.params); }
+      catch(e){
+        op.intentos = (op.intentos || 0) + 1; op.error = String(e && e.message || e);
+        if(op.intentos >= 8){
+          // Google la rechaza una y otra vez: se aparta para no frenar las demás (queda a la vista).
+          try{ var f = JSON.parse(localStorage.getItem(MP_COLA + '_fallidas') || '[]'); f.push(op); localStorage.setItem(MP_COLA + '_fallidas', JSON.stringify(f.slice(-50))); }catch(e3){}
+          c.shift(); mpGuardarCola(c); continue;
+        }
+        mpGuardarCola(c);
+        setTimeout(mpProcesarCola, Math.min(300000, 15000 * op.intentos));   // se reintenta más tarde, sin perder el orden
+        return;
+      }
+      c.shift(); mpGuardarCola(c);
+    }
+  } finally { _mpProcesando = false; try{ localStorage.removeItem(MP_COLA + '_lock'); }catch(e){} }
+}
+
+// ── apiCall: el mismo nombre de siempre, ahora reparte ──
+async function apiCall(action, params){
+  params = params || {};
+  if(mpFuente() === 'supabase'){
+    var t0 = performance.now();
+    try{
+      if(MP_LEER[action]){ var j = await MP_LEER[action](params); MP_ESTADO.fuente = 'Supabase'; MP_ESTADO.ms = Math.round(performance.now() - t0); mpPintar(); return j; }
+      if(action === 'sendEmails') return await mpEnviarCorreos(params);
+      if(MP_ESCRIBIR[action]){
+        var w = await MP_ESCRIBIR[action](params);
+        MP_ESTADO.fuente = 'Supabase'; MP_ESTADO.ms = Math.round(performance.now() - t0);
+        mpEncolar(w.google);
+        return w.r;
+      }
+    }catch(e){
+      if(action === 'sendEmails') throw e;           // nunca reenviar correos por otro camino
+      if(e && e.mpSesion) throw e;                   // sin sesión: avisar, no cambiar de base
+      // Supabase falló: este navegador vuelve a Google y lo dice.
+      try{ localStorage.setItem(MP_FUENTE, 'sheets'); }catch(e2){}
+      toast('Supabase no respondió (' + (e && e.message || e) + '). Este navegador vuelve a Google.', 'err');
+      MP_ESTADO.fuente = 'Google'; mpPintar();
+    }
+  }
+  var j2 = await apiCallGoogle(action, params);
+  MP_ESTADO.fuente = 'Google'; mpPintar();
+  return j2;
+}
+
+// Indicador abajo a la izquierda: de dónde vienen los datos y si hay copias pendientes.
+function mpPintar(){
+  var el = document.getElementById('mp-fuente');
+  if(!el){
+    el = document.createElement('div'); el.id = 'mp-fuente';
+    el.style.cssText = 'position:fixed;left:10px;bottom:10px;z-index:50;font:11px/1.4 system-ui,sans-serif;padding:4px 9px;border-radius:999px;background:rgba(4,20,31,.78);color:#fff;pointer-events:none';
+    if(!document.body) return; document.body.appendChild(el);
+  }
+  var c = MP_ESTADO.cola || mpLeerCola().length;
+  el.textContent = 'Datos: ' + (MP_ESTADO.fuente || (mpFuente() === 'supabase' ? 'Supabase' : 'Google')) +
+    (MP_ESTADO.ms ? ' · ' + (MP_ESTADO.ms / 1000).toFixed(1).replace('.', ',') + ' s' : '') +
+    (c ? ' · copia a Google pendiente: ' + c : '');
+}
+document.addEventListener('DOMContentLoaded', function(){ mpPintar(); mpProcesarCola(); });
+window.addEventListener('online', mpProcesarCola);
 
 function toObjs(rows){
   if(!rows||rows.length<2)return[];
