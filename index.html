@@ -165,6 +165,12 @@ tr.fila-visita td:first-child{box-shadow:inset 3px 0 0 #0F7A5A;}
 .form-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;}
 .form-row.three{grid-template-columns:1fr 1fr 1fr;}
 .form-full{grid-column:1/-1;}
+@media(min-width:769px){
+  #m-p .modal{max-width:620px;}
+  .form-row.r-ciudad{grid-template-columns:2fr 1fr;}
+  .form-row.r-contacto{grid-template-columns:1fr 1.5fr;}
+  .form-row.r-reviews{grid-template-columns:160px 160px;}
+}
 .form-group{display:flex;flex-direction:column;gap:6px;}
 .form-label{font-size:13px;color:var(--text2);text-transform:uppercase;letter-spacing:.06em;font-weight:500;}
 .form-control{background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:10px 13px;font-family:'Inter',sans-serif;font-size:16px;outline:none;width:100%;min-height:44px;}
@@ -860,14 +866,10 @@ h1,h2,h3{font-family:'Plus Jakarta Sans',sans-serif;font-weight:800;letter-spaci
     <div class="modal-body">
       <!-- Nombre -->
       <div class="form-row"><div class="form-group form-full"><label class="form-label">Nombre de la Práctica *</label><input class="form-control" id="fp-n" placeholder="Family Care Medical Group"></div></div>
-      <!-- Contacto general -->
-      <div class="form-section">Contacto & Ubicación</div>
-      <div class="form-row">
-        <div class="form-group"><label class="form-label">Teléfono Principal</label><input class="form-control" id="fp-t" placeholder="(407) 555-0000" inputmode="tel"></div>
-        <div class="form-group"><label class="form-label">Dirección</label><input class="form-control" id="fp-d" placeholder="123 Main St"></div>
-      </div>
-      <div class="form-row"><div class="form-group form-full"><label class="form-label">Email</label><input class="form-control" id="fp-e" placeholder="oficina@ejemplo.com" type="email" inputmode="email" autocapitalize="none"></div></div>
-      <div class="form-row">
+      <!-- Ubicación -->
+      <div class="form-section">Ubicación</div>
+      <div class="form-row"><div class="form-group form-full"><label class="form-label">Dirección</label><input class="form-control" id="fp-d" placeholder="123 Main St"></div></div>
+      <div class="form-row r-ciudad">
         <div class="form-group"><label class="form-label">Ciudad *</label>
           <div class="city-picker" id="cp-prosp">
             <input type="text" class="city-picker-input" id="fp-c-display" placeholder="Seleccionar ciudad..." readonly onclick="toggleCP('cp-prosp')">
@@ -882,6 +884,12 @@ h1,h2,h3{font-family:'Plus Jakarta Sans',sans-serif;font-weight:800;letter-spaci
         </div>
         <div class="form-group"><label class="form-label">Zip Code</label><input class="form-control" id="fp-z" placeholder="32801" inputmode="numeric" type="text" pattern="[0-9]{5}" maxlength="5" oninput="this.value=this.value.replace(/[^0-9]/g,'').slice(0,5)"></div>
       </div>
+      <!-- Contacto -->
+      <div class="form-section">Contacto</div>
+      <div class="form-row r-contacto">
+        <div class="form-group"><label class="form-label">Teléfono Principal</label><input class="form-control" id="fp-t" placeholder="(407) 555-0000" inputmode="tel"></div>
+        <div class="form-group"><label class="form-label">Email</label><input class="form-control" id="fp-e" placeholder="oficina@ejemplo.com" type="email" inputmode="email" autocapitalize="none"></div>
+      </div>
       <!-- Personal -->
       <div class="form-section">Personal de la Oficina</div>
       <div class="form-row">
@@ -895,7 +903,7 @@ h1,h2,h3{font-family:'Plus Jakarta Sans',sans-serif;font-weight:800;letter-spaci
       <div class="form-row"><div class="form-group form-full"><label class="form-label">Front Desk</label><input class="form-control" id="fp-f" placeholder="Nombre del front desk"></div></div>
       <!-- Reviews -->
       <div class="form-section">Google Reviews</div>
-      <div class="form-row">
+      <div class="form-row r-reviews">
         <div class="form-group"><label class="form-label">Cantidad de Reviews</label><input class="form-control" type="number" id="fp-rc" placeholder="0" min="0" inputmode="numeric"></div>
         <div class="form-group"><label class="form-label">Rating (1-5)</label><input class="form-control" type="number" id="fp-r" placeholder="4.5" min="0" max="5" step="0.1" inputmode="decimal"></div>
       </div>
