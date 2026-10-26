@@ -752,7 +752,7 @@ h1,h2,h3{font-family:'Plus Jakarta Sans',sans-serif;font-weight:800;letter-spaci
       <div id="pg-prospectos" class="page">
         <div class="page-header">
           <div><div class="page-title">Prospectos</div><div class="page-sub">Oficinas médicas</div></div>
-          <button class="btn btn-primary btn-sm hide-mob" onclick="openAddP()">+ Nueva Oficina</button>
+          <button class="btn btn-primary btn-sm hide-mob" onclick="openAddP()">+ New Office</button>
         </div>
         <div class="filters">
           <input class="f-input" id="f-s" placeholder="Buscar nombre, doctor, teléfono, email..." oninput="renderP()" style="flex:1;min-width:180px">
@@ -869,43 +869,43 @@ h1,h2,h3{font-family:'Plus Jakarta Sans',sans-serif;font-weight:800;letter-spaci
 
 <div class="overlay" id="m-p">
   <div class="modal modal-lg">
-    <div class="modal-head"><div class="modal-title" id="mp-t">Nueva Oficina</div><button class="modal-close" onclick="cm('m-p')">✕</button></div>
+    <div class="modal-head"><div class="modal-title" id="mp-t">New Office</div><button class="modal-close" onclick="cm('m-p')">✕</button></div>
     <div class="modal-body">
-      <!-- Práctica y personal -->
-      <div class="form-section">Práctica y personal</div>
+      <!-- Practice & Staff -->
+      <div class="form-section">Practice &amp; Staff</div>
       <div class="form-row r-nombre">
-        <div class="form-group"><label class="form-label">Nombre de la Práctica *</label><input class="form-control" id="fp-n" placeholder="Family Care Medical Group"></div>
-        <div class="form-group"><label class="form-label">Doctor(es)</label><input class="form-control" id="fp-dc" placeholder="Dr. Smith, Dr. Jones"></div>
-        <div class="form-group"><label class="form-label">Teléfono del Doctor</label><input class="form-control" id="fp-tdc" placeholder="(407) 555-0001" inputmode="tel"></div>
+        <div class="form-group"><label class="form-label">Practice Name *</label><input class="form-control" id="fp-n" placeholder="Family Care Medical Group"></div>
+        <div class="form-group"><label class="form-label">Doctor(s)</label><input class="form-control" id="fp-dc" placeholder="Dr. Smith, Dr. Jones"></div>
+        <div class="form-group"><label class="form-label">Ph. Doctor</label><input class="form-control" id="fp-tdc" placeholder="(407) 555-0001" inputmode="tel"></div>
       </div>
       <div class="form-row three">
-        <div class="form-group"><label class="form-label">Office Manager</label><input class="form-control" id="fp-m" placeholder="Nombre"></div>
-        <div class="form-group"><label class="form-label">Teléfono Office Manager</label><input class="form-control" id="fp-tm" placeholder="(407) 555-0002" inputmode="tel"></div>
-        <div class="form-group"><label class="form-label">Front Desk</label><input class="form-control" id="fp-f" placeholder="Nombre del front desk"></div>
+        <div class="form-group"><label class="form-label">Office Manager</label><input class="form-control" id="fp-m" placeholder="Name"></div>
+        <div class="form-group"><label class="form-label">Ph. Off. Manager</label><input class="form-control" id="fp-tm" placeholder="(407) 555-0002" inputmode="tel"></div>
+        <div class="form-group"><label class="form-label">Front Desk</label><input class="form-control" id="fp-f" placeholder="Front desk name"></div>
       </div>
-      <!-- Ubicación -->
-      <div class="form-section">Ubicación</div>
+      <!-- Location -->
+      <div class="form-section">Location</div>
       <div class="form-row r-dir">
-        <div class="form-group"><label class="form-label">Dirección</label><input class="form-control" id="fp-d" placeholder="123 Main St"></div>
-        <div class="form-group"><label class="form-label">Ciudad *</label><input class="form-control" id="fp-c" list="fp-c-opts" placeholder="Escribe o elige la ciudad" autocomplete="off"><datalist id="fp-c-opts"></datalist></div>
+        <div class="form-group"><label class="form-label">Address</label><input class="form-control" id="fp-d" placeholder="123 Main St"></div>
+        <div class="form-group"><label class="form-label">City *</label><input class="form-control" id="fp-c" list="fp-c-opts" placeholder="Type or pick a city" autocomplete="off"><datalist id="fp-c-opts"></datalist></div>
         <div class="form-group"><label class="form-label">Zip Code</label><input class="form-control" id="fp-z" placeholder="32801" inputmode="numeric" type="text" pattern="[0-9]{5}" maxlength="5" oninput="this.value=this.value.replace(/[^0-9]/g,'').slice(0,5)"></div>
       </div>
-      <!-- Contacto -->
-      <div class="form-section">Contacto</div>
+      <!-- Contact -->
+      <div class="form-section">Contact</div>
       <div class="form-row r-contacto">
-        <div class="form-group"><label class="form-label">Teléfono Principal</label><input class="form-control" id="fp-t" placeholder="(407) 555-0000" inputmode="tel"></div>
-        <div class="form-group"><label class="form-label">Email</label><input class="form-control" id="fp-e" placeholder="oficina@ejemplo.com" type="email" inputmode="email" autocapitalize="none"></div>
+        <div class="form-group"><label class="form-label">Main Phone</label><input class="form-control" id="fp-t" placeholder="(407) 555-0000" inputmode="tel"></div>
+        <div class="form-group"><label class="form-label">Email</label><input class="form-control" id="fp-e" placeholder="office@example.com" type="email" inputmode="email" autocapitalize="none"></div>
       </div>
       <!-- Reviews -->
       <div class="form-section">Google Reviews</div>
       <div class="form-row r-reviews">
-        <div class="form-group"><label class="form-label">Cantidad de Reviews</label><input class="form-control" type="number" id="fp-rc" placeholder="0" min="0" inputmode="numeric"></div>
+        <div class="form-group"><label class="form-label">Reviews #</label><input class="form-control" type="number" id="fp-rc" placeholder="0" min="0" inputmode="numeric"></div>
         <div class="form-group"><label class="form-label">Rating (1-5)</label><input class="form-control" type="number" id="fp-r" placeholder="4.5" min="0" max="5" step="0.1" inputmode="decimal"></div>
       </div>
-      <!-- Notas -->
-      <div class="form-row"><div class="form-group form-full"><label class="form-label">Notas Generales</label><textarea class="form-control" id="fp-no" placeholder="Información adicional sobre la práctica..."></textarea></div></div>
+      <!-- Notes -->
+      <div class="form-row"><div class="form-group form-full"><label class="form-label">Notes</label><textarea class="form-control" id="fp-no" placeholder="Additional info about the practice..."></textarea></div></div>
     </div>
-    <div class="modal-foot"><button class="btn btn-ghost" onclick="cm('m-p')">Cancelar</button><button class="btn btn-primary" onclick="saveP()" id="btn-sp">Guardar Oficina</button></div>
+    <div class="modal-foot"><button class="btn btn-ghost" onclick="cm('m-p')">Cancel</button><button class="btn btn-primary" onclick="saveP()" id="btn-sp">Save Office</button></div>
   </div>
 </div>
 
@@ -1272,7 +1272,7 @@ function toggleSB(){
 // ══ CONTEXTUAL TOP BAR (update action button per page) ══
 var CTX_ACTIONS={
   dashboard: null,
-  prospectos: {label:'+ Nueva Oficina', fn:'openAddP()', primary:true},
+  prospectos: {label:'+ New Office', fn:'openAddP()', primary:true},
   ciudades: {label:'+ Ciudad', fn:'openAddC()', primary:true},
   ajustes: null
 };
@@ -1705,7 +1705,7 @@ function renderVL(){
 
 // ══ PROSPECT CRUD ══
 function openAddP(){
-  S.editId=null;g('mp-t').textContent='Nueva Oficina Médica';
+  S.editId=null;g('mp-t').textContent='New Medical Office';
   ['fp-n','fp-t','fp-e','fp-d','fp-dc','fp-tdc','fp-m','fp-tm','fp-f','fp-no','fp-z'].forEach(function(id){g(id).value='';});
   g('fp-rc').value='';g('fp-r').value='';
   g('fp-c').value='';fillCityOpts();
@@ -1713,7 +1713,7 @@ function openAddP(){
 }
 function editCur(){
   var p=S.prosp.find(function(x){return x.id===S.viewId;});if(!p)return;
-  S.editId=p.id;g('mp-t').textContent='Editar Oficina';
+  S.editId=p.id;g('mp-t').textContent='Edit Office';
   g('fp-n').value=p.nombre||'';g('fp-t').value=p.telefono||'';g('fp-e').value=p.email||'';g('fp-d').value=p.direccion||'';
   g('fp-z').value=p.zipcode||'';g('fp-dc').value=p.doctores||'';g('fp-tdc').value=p.telDoctor||'';
   g('fp-m').value=p.manager||'';g('fp-tm').value=p.telManager||'';
@@ -1723,12 +1723,12 @@ function editCur(){
 }
 async function saveP(){
   var nombre=g('fp-n').value.trim(),ciudad=g('fp-c').value.trim();
-  if(!nombre){toast('El nombre es requerido','err');return;}
-  if(!ciudad){toast('Escribe o elige una ciudad','err');return;}
+  if(!nombre){toast('Name is required','err');return;}
+  if(!ciudad){toast('Type or pick a city','err');return;}
   var zip=g('fp-z').value.trim();
-  if(zip && zip.length!==5){toast('El Zip Code debe tener exactamente 5 dígitos','err');return;}
+  if(zip && zip.length!==5){toast('Zip Code must be exactly 5 digits','err');return;}
   var email=g('fp-e').value.trim();
-  if(email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){toast('El email no tiene un formato válido','err');return;}
+  if(email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){toast('Invalid email format','err');return;}
   var btn=g('btn-sp');btn.innerHTML='<span class="spin"></span>';btn.disabled=true;
   try{
     var data={
@@ -1742,10 +1742,10 @@ async function saveP(){
       notas:g('fp-no').value.trim(),creadoPor:S.user.username,creadoEn:new Date().toISOString()
     };
     await apiCall('saveProspecto',{data:data});
-    toast(S.editId?'Oficina actualizada ✓':'Oficina registrada ✓');
+    toast(S.editId?'Office updated ✓':'Office saved ✓');
     cm('m-p');await loadAll();
   }catch(e){toast('Error: '+e.message,'err');}
-  btn.innerHTML='Guardar Oficina';btn.disabled=false;
+  btn.innerHTML='Save Office';btn.disabled=false;
 }
 async function delCur(){
   if(!confirm('¿Eliminar esta oficina y todas sus visitas?'))return;
