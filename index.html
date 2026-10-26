@@ -919,15 +919,15 @@ h1,h2,h3{font-family:'Plus Jakarta Sans',sans-serif;font-weight:800;letter-spaci
     <div class="modal-body">
       <div class="detail-grid" id="md-g"></div>
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;margin-top:6px;flex-wrap:wrap;gap:8px">
-        <div style="font-size:13px;text-transform:uppercase;letter-spacing:.1em;color:var(--text3)">Historial de Contactos</div>
-        <button class="btn btn-primary btn-sm" onclick="openAddV()">+ Registrar Contacto</button>
+        <div style="font-size:13px;text-transform:uppercase;letter-spacing:.1em;color:var(--text3)">Contact History</div>
+        <button class="btn btn-primary btn-sm" onclick="openAddV()">+ Log Contact</button>
       </div>
       <div id="md-v"></div>
     </div>
     <div class="modal-foot">
-      <button class="btn btn-ghost btn-sm" onclick="editCur()">Editar</button>
-      <button class="btn btn-danger btn-sm" onclick="delCur()">Eliminar</button>
-      <button class="btn btn-primary btn-sm" onclick="cm('m-d')">Cerrar</button>
+      <button class="btn btn-ghost btn-sm" onclick="editCur()">Edit</button>
+      <button class="btn btn-danger btn-sm" onclick="delCur()">Delete</button>
+      <button class="btn btn-primary btn-sm" onclick="cm('m-d')">Close</button>
     </div>
   </div>
 </div>
@@ -1481,6 +1481,9 @@ var SC={'Interesado':'badge-g','Cliente':'badge-ok','Cliente ✓':'badge-ok','Se
 // ── Tipo de contacto ──
 var TC={'Visita':'badge-vis','Llamada':'badge-lla','Buzón de voz':'badge-buz','Buzon de voz':'badge-buz','Email':'badge-ema'};
 var TIPO_POR_DEFECTO='Llamada';
+var TIPO_EN={'Llamada':'Call','Visita':'Visit','Buzón de voz':'Voicemail','Buzon de voz':'Voicemail','Email':'Email'};
+var EST_EN={'Seguimiento':'Follow-up','Interesado':'Interested','No disponible':'Unavailable','No interesado':'Not interested','Descartado':'Discarded','Cliente':'Client','Cliente ✓':'Client ✓','Visitado':'Visited'};
+function tEN(m,v){return (v!=null&&m[v]!==undefined)?m[v]:(v||'');}
 function tipoDe(v){var s=v&&v.tipo?String(v.tipo).trim():'';return s||TIPO_POR_DEFECTO;}
 function claseTipo(v){return TC[tipoDe(v)]||'badge-gray';}
 function esVisita(v){return tipoDe(v)==='Visita';}
@@ -1668,19 +1671,19 @@ function openD(id){
   function tel(v){return v?'<a href="tel:'+v+'">'+x(v)+'</a>':x(v||'—');}
   function mail(v){return v?'<a href="mailto:'+v+'">'+x(v)+'</a>':'—';}
   g('md-g').innerHTML=[
-    ['Teléfono Principal',tel(p.telefono)],
+    ['Main Phone',tel(p.telefono)],
     ['Email',mail(p.email)],
-    ['Dirección',x(p.direccion||'—')],
-    ['Ciudad',x(p.ciudad||'—')],
+    ['Address',x(p.direccion||'—')],
+    ['City',x(p.ciudad||'—')],
     ['Zip Code',x(p.zipcode||'—')],
-    ['Doctor(es)',x(p.doctores||'—')],
-    ['Tel. Doctor',tel(p.telDoctor)],
+    ['Doctor(s)',x(p.doctores||'—')],
+    ['Ph. Doctor',tel(p.telDoctor)],
     ['Office Manager',x(p.manager||'—')],
-    ['Tel. Manager',tel(p.telManager)],
+    ['Ph. Off. Manager',tel(p.telManager)],
     ['Front Desk',x(p.frontdesk||'—')],
-    ['Google Reviews','<span class="stars">'+st+'</span> '+(p.rating||0)+' · '+(p.reviewCount||0)+' reseñas'],
-    ['Registrado por',x(p.creadoPor||'—')],
-    ['Notas',x(p.notas||'—')]
+    ['Google Reviews','<span class="stars">'+st+'</span> '+(p.rating||0)+' · '+(p.reviewCount||0)+' reviews'],
+    ['Added by',x(p.creadoPor||'—')],
+    ['Notes',x(p.notas||'—')]
   ].map(function(i){return'<div class="detail-item"><div class="detail-lbl">'+i[0]+'</div><div class="detail-val">'+i[1]+'</div></div>';}).join('');
   renderVL();om('m-d');
 }
@@ -1689,7 +1692,7 @@ function renderVL(){
   g('md-v').innerHTML=vs.length?vs.map(function(v){
     var canEdit=S.user&&(S.user.rol==='admin'||S.user.username===v.usuario);
     return'<div class="visit-card'+(esVisita(v)?' es-visita':'')+'">'
-      +'<div class="visit-meta"><span class="visit-date">'+fd(v.fecha)+'</span><span class="visit-user">por '+x(v.usuario)+'</span>'
+      +'<div class="visit-meta"><span class="visit-date">'+fd(v.fecha)+'</span><span class="visit-user">by '+x(v.usuario)+'</span>'
       +(canEdit?'<div style="display:flex;gap:5px;margin-left:auto">'
         +'<button class="btn btn-ghost btn-sm" style="padding:4px 8px;font-size:12px" onclick="openEditVisit(\''+v.id+'\')">✏️</button>'
         +'<button class="btn btn-danger btn-sm" style="padding:4px 8px;font-size:12px" onclick="deleteVisit(\''+v.id+'\')">🗑️</button>'
@@ -1697,10 +1700,10 @@ function renderVL(){
       +'</div>'
       +'<div style="font-size:15px;color:var(--text);line-height:1.5">'+x(v.notas)+'</div>'
       +'<div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap">'
-        +'<span class="badge '+claseTipo(v)+'">'+x(tipoDe(v))+'</span>'
-        +'<span class="badge '+(SC[v.estado]||'badge-gray')+'">'+x(v.estado)+'</span></div>'
+        +'<span class="badge '+claseTipo(v)+'">'+x(tEN(TIPO_EN,tipoDe(v)))+'</span>'
+        +'<span class="badge '+(SC[v.estado]||'badge-gray')+'">'+x(tEN(EST_EN,v.estado))+'</span></div>'
       +'</div>';
-  }).join(''):'<div style="text-align:center;padding:24px;color:var(--text3)">Sin contactos aún</div>';
+  }).join(''):'<div style="text-align:center;padding:24px;color:var(--text3)">No contacts yet</div>';
 }
 
 // ══ PROSPECT CRUD ══
@@ -2171,7 +2174,7 @@ function fd(d){
   if(!m) return s;
   var f=new Date(+m[1],+m[2]-1,+m[3],12,0,0);
   if(isNaN(f.getTime()))return s;
-  return f.toLocaleDateString('es-ES',{day:'2-digit',month:'short',year:'numeric'});
+  return f.toLocaleDateString('en-US',{day:'2-digit',month:'short',year:'numeric'});
 }
 function toast(msg,type){var t=g('toast');t.textContent=msg;t.className='toast '+(type||'')+' show';setTimeout(function(){t.classList.remove('show');},3000);}
 function tgPass(id,btn){var inp=g(id);if(inp.type==='password'){inp.type='text';btn.textContent='🔒';}else{inp.type='password';btn.textContent='👁';}}
